@@ -124,6 +124,8 @@ namespace HumanReadableMap16 {
 			// for page 0x2 of tilesets 0x0-0xE, if page 2 is set to be tileset-specific
 			static void convert_tileset_specific_page_2(std::vector<Byte> map16_buffer, unsigned int tileset_number, size_t tiles_start_offset);
 
+			static void convert_global_page_2_for_tileset_specific_page_2s(std::vector<Byte> map16_buffer, size_t acts_like_offset);
+
 			// converts one set of 8 pipe tiles for pipe tile numbers 0x0-0x3, no acts like settings
 			static void convert_normal_pipe_tiles(std::vector<Byte> map16_buffer, unsigned int pipe_number, size_t normal_pipe_offset);
 

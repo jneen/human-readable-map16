@@ -156,6 +156,26 @@ void HumanReadableMap16::Converter::convert_FG_page(std::vector<Byte> map16_buff
 	fclose(fp);
 }
 
+void HumanReadableMap16::Converter::convert_global_page_2_for_tileset_specific_page_2s(std::vector<Byte> map16_buffer, size_t acts_like_offset) {
+	FILE* fp;
+	fopen_s(&fp, "global_pages\\page_02.txt", "w");
+
+	auto curr_acts_like_it = map16_buffer.begin() + acts_like_offset + PAGE_SIZE * ACTS_LIKE_SIZE * 2;
+
+	unsigned int curr_tile_number = 0x200;
+
+	for (unsigned int i = 0; i != PAGE_SIZE; i++) {
+		_2Bytes acts_like = join_bytes(curr_acts_like_it, curr_acts_like_it + ACTS_LIKE_SIZE);
+
+		convert_to_file(fp, curr_tile_number, acts_like);
+
+		++curr_tile_number;
+		curr_acts_like_it += ACTS_LIKE_SIZE;
+	}
+
+	fclose(fp);
+}
+
 void HumanReadableMap16::Converter::convert_BG_page(std::vector<Byte> map16_buffer, unsigned int page_number, size_t tiles_start_offset) {
 	FILE* fp;
 	char filename[256];
@@ -282,7 +302,7 @@ void HumanReadableMap16::Converter::convert_first_two_non_tileset_specific(std::
 
 	std::unordered_set<_2Bytes> tileset_group_specific = std::unordered_set<_2Bytes>(TILESET_GROUP_SPECIFIC_TILES.begin(), TILESET_GROUP_SPECIFIC_TILES.end());
 
-	size_t offset_of_tileset_group_1_tiles = tileset_group_specific_offset + PAGE_SIZE * 2;
+	size_t offset_of_tileset_group_1_tiles = tileset_group_specific_offset + PAGE_SIZE * _16x16_BYTE_SIZE * 2;
 
 	auto curr_tile_it = map16_buffer.begin() + offset_of_tileset_group_1_tiles;
 	auto curr_acts_it = map16_buffer.begin() + acts_like_offset;
@@ -319,6 +339,7 @@ void HumanReadableMap16::Converter::convert_to(const fs::path input_file, const 
 	std::vector<Byte> bytes = read_binary_file(input_file);
 	auto header = get_header_from_map16_buffer(bytes);
 
+	fs::remove_all(output_directory);
 	fs::create_directory(output_directory);
 	_wchdir(output_directory.c_str());
 
@@ -343,8 +364,15 @@ void HumanReadableMap16::Converter::convert_to(const fs::path input_file, const 
 	const auto& diagonal_grassland_pipes = offset_size_table[7];
 
 	convert_first_two_non_tileset_specific(bytes, tileset_specific_first_two_pair.first, full_acts_like_pair.first);
-	
-	unsigned int first_truly_global_page = has_tileset_specific_page_2s(header) ? 3 : 2;
+
+	unsigned int first_truly_global_page;
+	if (has_tileset_specific_page_2s(header)) {
+		first_truly_global_page = 3;
+		convert_global_page_2_for_tileset_specific_page_2s(bytes, full_acts_like_pair.first);
+	}
+	else {
+		first_truly_global_page = 2;
+	}
 
 #ifdef MULTICORE
 	#pragma omp parallel for
