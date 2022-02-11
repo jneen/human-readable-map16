@@ -1,36 +1,12 @@
 #include "pch.h"
 #include "human_map16.h"
+#include "arrays.h"
 
-namespace HumanReadableMap16 {
-	std::array TILESET_GROUP_SPECIFIC_TILES{
-	0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0x80, 0x81, 0x82,
-	0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F, 0x90, 0x91, 0x92,
-	0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F, 0xA0, 0xA1, 0xA2,
-	0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0xB0, 0xB1, 0xB2,
-	0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, 0xC1, 0xC2,
-	0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, 0xD2,
-	0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, 0xE0, 0xE1, 0xE2,
-	0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF, 0xF0, 0xF1, 0xF2,
-	0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF, 0x107, 0x108, 0x109,
-	0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x153, 0x154, 0x155, 0x156, 0x157, 0x158, 0x159, 0x15A, 0x15B,
-	0x15C, 0x15D, 0x15E, 0x15F, 0x160, 0x161, 0x162, 0x163, 0x164, 0x165, 0x166, 0x167, 0x168, 0x169, 0x16A, 0x16B,
-	0x16C, 0x16D
-	};
-
-	std::array DIAGONAL_PIPE_TILES{
-		0x1C4, 0x1C5, 0x1C6, 0x1C7, 0x1EC, 0x1ED, 0x1EE, 0x1EF
-	};
-
-	std::array NORMAL_PIPE_TILES{
-		0x133, 0x134, 0x135, 0x136, 0x137, 0x138, 0x139, 0x13A
-	};
-}
-
-bool HumanReadableMap16::Converter::has_tileset_specific_page_2s(std::shared_ptr<Header> header) {
+bool HumanReadableMap16::from_map16::has_tileset_specific_page_2s(std::shared_ptr<Header> header) {
 	return header->various_flags_and_info & 1;
 }
 
-HumanReadableMap16::_4Bytes HumanReadableMap16::Converter::join_bytes(ByteIterator begin, ByteIterator end) {
+HumanReadableMap16::_4Bytes HumanReadableMap16::from_map16::join_bytes(ByteIterator begin, ByteIterator end) {
 	_4Bytes t = 0;
 	unsigned int i = 0;
 	for (auto& curr = begin; curr != end; ++curr) {
@@ -40,7 +16,7 @@ HumanReadableMap16::_4Bytes HumanReadableMap16::Converter::join_bytes(ByteIterat
 	return t;
 }
 
-std::vector<HumanReadableMap16::Byte> HumanReadableMap16::Converter::read_binary_file(const fs::path file) {
+std::vector<HumanReadableMap16::Byte> HumanReadableMap16::from_map16::read_binary_file(const fs::path file) {
 	std::ifstream f(file.string(), std::ios::binary);
 
 	f.unsetf(std::ios::skipws);
@@ -56,7 +32,7 @@ std::vector<HumanReadableMap16::Byte> HumanReadableMap16::Converter::read_binary
 	return vec;
 }
 
-std::shared_ptr<HumanReadableMap16::Header> HumanReadableMap16::Converter::get_header_from_map16_buffer(std::vector<Byte> map16_buffer) {
+std::shared_ptr<HumanReadableMap16::Header> HumanReadableMap16::from_map16::get_header_from_map16_buffer(std::vector<Byte> map16_buffer) {
 	auto header = std::make_shared<Header>();
 	const auto& beg = map16_buffer.begin();
 
@@ -77,7 +53,7 @@ std::shared_ptr<HumanReadableMap16::Header> HumanReadableMap16::Converter::get_h
 	return header;
 }
 
-std::vector<HumanReadableMap16::OffsetSizePair> HumanReadableMap16::Converter::get_offset_size_table(std::vector<Byte> map16_buffer, std::shared_ptr<Header> header) {
+std::vector<HumanReadableMap16::OffsetSizePair> HumanReadableMap16::from_map16::get_offset_size_table(std::vector<Byte> map16_buffer, std::shared_ptr<Header> header) {
 	_4Bytes off_table_offset = header->offset_size_table_offset;
 	const auto& beg = map16_buffer.begin();
 
@@ -95,16 +71,36 @@ std::vector<HumanReadableMap16::OffsetSizePair> HumanReadableMap16::Converter::g
 	return pointers_and_sizes;
 }
 
+
+bool HumanReadableMap16::from_map16::try_LM_empty_convert(FILE* fp, unsigned int tile_number, _2Bytes acts_like, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4) {
+	if (acts_like != LM_EMPTY_TILE_ACTS_LIKE || tile1 != LM_EMPTY_TILE_WORD ||
+		tile2 != LM_EMPTY_TILE_WORD || tile3 != LM_EMPTY_TILE_WORD || tile4 != LM_EMPTY_TILE_WORD) {
+		return false;
+	}
+
+	fprintf_s(fp, LM_EMPTY_TILE_FORMAT, tile_number);
+
+	return true;
+}
+
+bool HumanReadableMap16::from_map16::try_LM_empty_convert(FILE* fp, unsigned int tile_number, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4) {
+	return try_LM_empty_convert(fp, tile_number, LM_EMPTY_TILE_ACTS_LIKE, tile1, tile2, tile3, tile4);
+}
+
 #define TILE_FORMAT(tile) \
 tile & 0b1111111111, \
 (tile >> 10) & 0b000111, \
-(tile & 0b0100000000000000) ? 'x' : '-', \
-(tile & 0b1000000000000000) ? 'y' : '-', \
-(tile & 0b0010000000000000) ? 'p' : '-'
+(tile & 0b0100000000000000) ? HumanReadableMap16::X_FLIP_ON : HumanReadableMap16::X_FLIP_OFF, \
+(tile & 0b1000000000000000) ? HumanReadableMap16::Y_FLIP_ON : HumanReadableMap16::Y_FLIP_OFF, \
+(tile & 0b0010000000000000) ? HumanReadableMap16::PRIORITY_ON : HumanReadableMap16::PRIORITY_OFF
 
 // tiles: first byte -> yxpccctt, second byte -> tile number pls (need to switch bytes before calling)
-void HumanReadableMap16::Converter::convert_to_file(FILE* fp, unsigned int tile_number, _2Bytes acts_like, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4) {
-	fprintf_s(fp, "%04X: %03X { %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c }\n",
+void HumanReadableMap16::from_map16::convert_to_file(FILE* fp, unsigned int tile_number, _2Bytes acts_like, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4) {
+	if (try_LM_empty_convert(fp, tile_number, acts_like, tile1, tile2, tile3, tile4)) {
+		return;
+	}
+
+	fprintf_s(fp, STANDARD_FORMAT,
 		tile_number, acts_like,
 		TILE_FORMAT(tile1),
 		TILE_FORMAT(tile2),
@@ -113,14 +109,18 @@ void HumanReadableMap16::Converter::convert_to_file(FILE* fp, unsigned int tile_
 	);
 }
 
-void HumanReadableMap16::Converter::convert_to_file(FILE* fp, unsigned int tile_number, _2Bytes acts_like) {
-	fprintf_s(fp, "%04X: %03X\n",
+void HumanReadableMap16::from_map16::convert_to_file(FILE* fp, unsigned int tile_number, _2Bytes acts_like) {
+	fprintf_s(fp, NO_TILES_FORMAT,
 		tile_number, acts_like
 	);
 }
 
-void HumanReadableMap16::Converter::convert_to_file(FILE* fp, unsigned int tile_number, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4) {
-	fprintf_s(fp, "%04X:     { %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c }\n",
+void HumanReadableMap16::from_map16::convert_to_file(FILE* fp, unsigned int tile_number, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4) {
+	if (try_LM_empty_convert(fp, tile_number, tile1, tile2, tile3, tile4)) {
+		return;
+	}
+
+	fprintf_s(fp, NO_ACTS_FORMAT,
 		tile_number,
 		TILE_FORMAT(tile1),
 		TILE_FORMAT(tile2),
@@ -129,7 +129,7 @@ void HumanReadableMap16::Converter::convert_to_file(FILE* fp, unsigned int tile_
 	);
 }
 
-void HumanReadableMap16::Converter::convert_FG_page(std::vector<Byte> map16_buffer, unsigned int page_number,
+void HumanReadableMap16::from_map16::convert_FG_page(std::vector<Byte> map16_buffer, unsigned int page_number,
 	size_t tiles_start_offset, size_t acts_like_start_offset) {
 	FILE* fp;
 	char filename[256];
@@ -156,7 +156,7 @@ void HumanReadableMap16::Converter::convert_FG_page(std::vector<Byte> map16_buff
 	fclose(fp);
 }
 
-void HumanReadableMap16::Converter::convert_global_page_2_for_tileset_specific_page_2s(std::vector<Byte> map16_buffer, size_t acts_like_offset) {
+void HumanReadableMap16::from_map16::convert_global_page_2_for_tileset_specific_page_2s(std::vector<Byte> map16_buffer, size_t acts_like_offset) {
 	FILE* fp;
 	fopen_s(&fp, "global_pages\\page_02.txt", "w");
 
@@ -176,7 +176,7 @@ void HumanReadableMap16::Converter::convert_global_page_2_for_tileset_specific_p
 	fclose(fp);
 }
 
-void HumanReadableMap16::Converter::convert_BG_page(std::vector<Byte> map16_buffer, unsigned int page_number, size_t tiles_start_offset) {
+void HumanReadableMap16::from_map16::convert_BG_page(std::vector<Byte> map16_buffer, unsigned int page_number, size_t tiles_start_offset) {
 	FILE* fp;
 	char filename[256];
 	sprintf_s(filename, "global_pages\\page_%02X.txt", page_number);
@@ -199,7 +199,7 @@ void HumanReadableMap16::Converter::convert_BG_page(std::vector<Byte> map16_buff
 	fclose(fp);
 }
 
-void HumanReadableMap16::Converter::convert_tileset_group_specific_pages(std::vector<Byte> map16_buffer, unsigned int tileset_group_number,
+void HumanReadableMap16::from_map16::convert_tileset_group_specific_pages(std::vector<Byte> map16_buffer, unsigned int tileset_group_number,
 	size_t tiles_start_offset, size_t diagonal_pipes_offset) {
 	FILE* fp;
 	char filename[256];
@@ -244,7 +244,7 @@ void HumanReadableMap16::Converter::convert_tileset_group_specific_pages(std::ve
 	fclose(fp);
 }
 
-void HumanReadableMap16::Converter::convert_tileset_specific_page_2(std::vector<Byte> map16_buffer, unsigned int tileset_number, size_t tiles_start_offset) {
+void HumanReadableMap16::from_map16::convert_tileset_specific_page_2(std::vector<Byte> map16_buffer, unsigned int tileset_number, size_t tiles_start_offset) {
 	FILE* fp;
 	char filename[256];
 	sprintf_s(filename, "tileset_specific_pages\\tileset_%X.txt", tileset_number);
@@ -270,7 +270,7 @@ void HumanReadableMap16::Converter::convert_tileset_specific_page_2(std::vector<
 	fclose(fp);
 }
 
-void HumanReadableMap16::Converter::convert_normal_pipe_tiles(std::vector<Byte> map16_buffer, unsigned int pipe_number, size_t normal_pipe_offset) {
+void HumanReadableMap16::from_map16::convert_normal_pipe_tiles(std::vector<Byte> map16_buffer, unsigned int pipe_number, size_t normal_pipe_offset) {
 	FILE* fp;
 	char filename[256];
 	sprintf_s(filename, "pipe_tiles\\pipe_%X.txt", pipe_number);
@@ -292,7 +292,7 @@ void HumanReadableMap16::Converter::convert_normal_pipe_tiles(std::vector<Byte> 
 	fclose(fp);
 }
 
-void HumanReadableMap16::Converter::convert_first_two_non_tileset_specific(std::vector<Byte> map16_buffer,
+void HumanReadableMap16::from_map16::convert_first_two_non_tileset_specific(std::vector<Byte> map16_buffer,
 	size_t tileset_group_specific_offset, size_t acts_like_offset) {
 
 	FILE* fp1;
@@ -335,7 +335,7 @@ void HumanReadableMap16::Converter::convert_first_two_non_tileset_specific(std::
 	fclose(fp2);
 }
 
-void HumanReadableMap16::Converter::convert_to(const fs::path input_file, const fs::path output_directory) {
+void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs::path output_directory) {
 	std::vector<Byte> bytes = read_binary_file(input_file);
 	auto header = get_header_from_map16_buffer(bytes);
 
@@ -408,40 +408,4 @@ void HumanReadableMap16::Converter::convert_to(const fs::path input_file, const 
 	for (unsigned int pipe = 0; pipe != 0x4; pipe++) {
 		convert_normal_pipe_tiles(bytes, pipe, normal_pipe_tiles.first);
 	}
-
-	/* 
-		== PLAN ==
-
-		"tileset" will refer to the list of GFX headers in LM (0x0-0xE)
-		"tileset group" will refer to the T values in the GFX headers in LM (0x0-0x4)
-		"tileset-specific" and "tileset-group-specific" are analogous
-
-		1. Grab first two pages of some tileset group != 0, convert all its NON-TILESET-GROUP-SPECIFIC tiles and acts like settings like normal, 
-		   for the tileset-group-specific tiles and the 8 normal pipe tiles 0x133-0x13A, only convert the acts like settings, like this:
-		       00C2: 0C2
-		   (probably single core) (pointers 1 and 5)
-		   NOTE: A non-zero tileset-group is chosen, so that we can access the tiles that may otherwise be covered by diagonal pipe tiles, which are 
-		         tileset-group-specific, but only in tileset group 0
-
-		2. Convert all remaining global pages including acts like settings, skip page 2 if it is set to be tileset-specific (OMP if possible) (pointers 0 and 1)
-
-		3. Convert each set of tileset-group-specific pages 0 and 1 (note, no acts like settings!) to its own file like this:
-			00C2:     { 12C 5 pxy  01D 1 -x-  0A8 6 p-y  181 1 p-- }
-		(pointers 5 and 7)
-			NOTE: Acts like settings stay the same between "different" tileset-group-specific tiles, no matter if they're page 0 or 1!!
-			NOTE: In tileset-group 0, include the diagonal pipe tiles 0x1C4-0x1C7 and 0x1EC-0x1EF from pointer 7 (also without acts like settings)!
-
-		4. Convert each set of tileset-specific page 2s (if they're set to be tileset-specific in the header) (note, no acts like settings!) to its own file like this:
-			00C2:     { 12C 5 pxy  01D 1 -x-  0A8 6 p-y  181 1 p-- }
-		(pointer 4)
-			NOTE: Acts like settings stay the same between "different" tileset-group-specific tiles on page 2!!
-
-		5. Convert all 4 sets of 8 pipe tiles 0x133-0x13A in pointer 6, but only their tiles, like this:
-			0133:     { 09B 4 -xy  063 1 --y  1BE 6 pxy  1D1 1 p-y }
-		(probably each in their own file)
-	*/
-}
-
-void HumanReadableMap16::Converter::convert_from(const fs::path input_directory, const fs::path output_file) {
-
 }

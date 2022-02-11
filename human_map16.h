@@ -1,7 +1,5 @@
 #pragma once
 
-#include "framework.h"
-
 #ifdef MULTICORE
 #include <omp.h>
 #endif
@@ -11,7 +9,6 @@
 #include <fstream>
 #include <unordered_set>
 #include <memory>
-#include <array>
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -21,6 +18,21 @@ namespace HumanReadableMap16 {
 	using _4Bytes = unsigned int;
 	using ByteIterator = std::vector<Byte>::iterator;
 	using OffsetSizePair = std::pair<_4Bytes, _4Bytes>;
+
+	constexpr const char X_FLIP_ON = 'x';
+	constexpr const char X_FLIP_OFF = '-';
+	constexpr const char Y_FLIP_ON = 'y';
+	constexpr const char Y_FLIP_OFF = '-';
+	constexpr const char PRIORITY_ON = 'p';
+	constexpr const char PRIORITY_OFF = '-';
+
+	constexpr const char* STANDARD_FORMAT = "%04X: %03X { %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c }\n";
+	constexpr const char* NO_ACTS_FORMAT =  "%04X:     { %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c }\n";
+	constexpr const char* NO_TILES_FORMAT = "%04X: %03X\n";
+
+	constexpr const char* LM_EMPTY_TILE_FORMAT = "%04X: ~\n";
+	constexpr _2Bytes LM_EMPTY_TILE_ACTS_LIKE = 0x130;
+	constexpr _2Bytes LM_EMPTY_TILE_WORD = 0x1004;
 
 	constexpr size_t PAGE_SIZE = 0x100;
 	constexpr size_t _16x16_BYTE_SIZE = 8;
@@ -97,7 +109,7 @@ namespace HumanReadableMap16 {
 		// 0x30 bytes copyright string (will insert fine without)
 	};
 
-	class Converter {
+	class from_map16 {
 		private:
 			static bool has_tileset_specific_page_2s(std::shared_ptr<Header> header);
 
@@ -106,6 +118,8 @@ namespace HumanReadableMap16 {
 			static std::shared_ptr<Header> get_header_from_map16_buffer(std::vector<Byte> map16_buffer);
 			static std::vector<OffsetSizePair> get_offset_size_table(std::vector<Byte> map16_buffer, std::shared_ptr<Header> header);
 
+			static bool try_LM_empty_convert(FILE* fp, unsigned int tile_number, _2Bytes acts_like, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4);
+			static bool try_LM_empty_convert(FILE* fp, unsigned int tile_number, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4);
 			static void convert_to_file(FILE* fp, unsigned int tile_numer, _2Bytes acts_like, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4);
 			static void convert_to_file(FILE* fp, unsigned int tile_numer, _2Bytes acts_like);
 			static void convert_to_file(FILE* fp, unsigned int tile_numer, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4);
@@ -132,7 +146,12 @@ namespace HumanReadableMap16 {
 			static void convert_first_two_non_tileset_specific(std::vector<Byte> map16_buffer, size_t tileset_group_specific_pair, size_t acts_like_pair);
 
 		public:
-			static void convert_to(const fs::path input_file, const fs::path output_directory);
-			static void convert_from(const fs::path input_directory, const fs::path output_file);
+			static void convert(const fs::path input_file, const fs::path output_directory);
+	};
+
+	class to_map16 {
+
+
+		static void convert(const fs::path input_directory, const fs::path output_file);
 	};
 }
