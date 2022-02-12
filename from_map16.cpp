@@ -6,6 +6,10 @@ bool HumanReadableMap16::from_map16::has_tileset_specific_page_2s(std::shared_pt
 	return header->various_flags_and_info & 1;
 }
 
+bool HumanReadableMap16::from_map16::is_full_game_export(std::shared_ptr<Header> header) {
+	return header->various_flags_and_info & 2;
+}
+
 HumanReadableMap16::_4Bytes HumanReadableMap16::from_map16::join_bytes(ByteIterator begin, ByteIterator end) {
 	_4Bytes t = 0;
 	unsigned int i = 0;
@@ -49,6 +53,10 @@ std::shared_ptr<HumanReadableMap16::Header> HumanReadableMap16::from_map16::get_
 	header->base_x = join_bytes(beg + BASE_X_OFFSET, beg + BASE_Y_OFFSET);
 	header->base_y = join_bytes(beg + BASE_Y_OFFSET, beg + VARIOUS_FLAGS_AND_INFO_OFFSET);
 	header->various_flags_and_info = join_bytes(beg + VARIOUS_FLAGS_AND_INFO_OFFSET, beg + VARIOUS_FLAGS_AND_INFO_OFFSET + VARIOUS_FLAGS_AND_INFO_SIZE);
+
+	for (unsigned int i = 0; i != header->offset_size_table_offset - COMMENT_FIELD_OFFSET; i++) {
+		header->comment += map16_buffer.at(COMMENT_FIELD_OFFSET + i);
+	}
 
 	return header;
 }
@@ -133,7 +141,7 @@ void HumanReadableMap16::from_map16::convert_FG_page(std::vector<Byte> map16_buf
 	size_t tiles_start_offset, size_t acts_like_start_offset) {
 	FILE* fp;
 	char filename[256];
-	sprintf_s(filename, "global_pages\\page_%02X.txt", page_number);
+	sprintf_s(filename, "global_pages\\FG_pages\\page_%02X.txt", page_number);
 	fopen_s(&fp, filename, "w");
 	unsigned int curr_tile_number = page_number * PAGE_SIZE;
 	auto curr_tile_it = map16_buffer.begin() + tiles_start_offset + PAGE_SIZE * _16x16_BYTE_SIZE * page_number;
@@ -158,7 +166,7 @@ void HumanReadableMap16::from_map16::convert_FG_page(std::vector<Byte> map16_buf
 
 void HumanReadableMap16::from_map16::convert_global_page_2_for_tileset_specific_page_2s(std::vector<Byte> map16_buffer, size_t acts_like_offset) {
 	FILE* fp;
-	fopen_s(&fp, "global_pages\\page_02.txt", "w");
+	fopen_s(&fp, "global_pages\\FG_pages\\page_02.txt", "w");
 
 	auto curr_acts_like_it = map16_buffer.begin() + acts_like_offset + PAGE_SIZE * ACTS_LIKE_SIZE * 2;
 
@@ -179,7 +187,7 @@ void HumanReadableMap16::from_map16::convert_global_page_2_for_tileset_specific_
 void HumanReadableMap16::from_map16::convert_BG_page(std::vector<Byte> map16_buffer, unsigned int page_number, size_t tiles_start_offset) {
 	FILE* fp;
 	char filename[256];
-	sprintf_s(filename, "global_pages\\page_%02X.txt", page_number);
+	sprintf_s(filename, "global_pages\\BG_pages\\page_%02X.txt", page_number);
 	fopen_s(&fp, filename, "w");
 	unsigned int curr_tile_number = page_number * PAGE_SIZE;
 	auto curr_tile_it = map16_buffer.begin() + tiles_start_offset + PAGE_SIZE * _16x16_BYTE_SIZE * page_number;
@@ -203,7 +211,7 @@ void HumanReadableMap16::from_map16::convert_tileset_group_specific_pages(std::v
 	size_t tiles_start_offset, size_t diagonal_pipes_offset) {
 	FILE* fp;
 	char filename[256];
-	sprintf_s(filename, "tileset_group_specific_pages\\tileset_group_%X.txt", tileset_group_number);
+	sprintf_s(filename, "tileset_group_specific_tiles\\tileset_group_%X.txt", tileset_group_number);
 	fopen_s(&fp, filename, "w");
 
 	auto curr_tile_it = map16_buffer.begin() + tiles_start_offset + PAGE_SIZE * _16x16_BYTE_SIZE * 2 * tileset_group_number + _16x16_BYTE_SIZE * TILESET_GROUP_SPECIFIC_TILES.at(0);
@@ -247,7 +255,7 @@ void HumanReadableMap16::from_map16::convert_tileset_group_specific_pages(std::v
 void HumanReadableMap16::from_map16::convert_tileset_specific_page_2(std::vector<Byte> map16_buffer, unsigned int tileset_number, size_t tiles_start_offset) {
 	FILE* fp;
 	char filename[256];
-	sprintf_s(filename, "tileset_specific_pages\\tileset_%X.txt", tileset_number);
+	sprintf_s(filename, "tileset_specific_tiles\\tileset_%X.txt", tileset_number);
 	fopen_s(&fp, filename, "w");
 
 	unsigned int base_tile_number = 0x200;
@@ -297,8 +305,8 @@ void HumanReadableMap16::from_map16::convert_first_two_non_tileset_specific(std:
 
 	FILE* fp1;
 	FILE* fp2;
-	fopen_s(&fp1, "global_pages\\page_00.txt", "w");
-	fopen_s(&fp2, "global_pages\\page_01.txt", "w");
+	fopen_s(&fp1, "global_pages\\FG_pages\\page_00.txt", "w");
+	fopen_s(&fp2, "global_pages\\FG_pages\\page_01.txt", "w");
 
 	std::unordered_set<_2Bytes> tileset_group_specific = std::unordered_set<_2Bytes>(TILESET_GROUP_SPECIFIC_TILES.begin(), TILESET_GROUP_SPECIFIC_TILES.end());
 
@@ -335,6 +343,39 @@ void HumanReadableMap16::from_map16::convert_first_two_non_tileset_specific(std:
 	fclose(fp2);
 }
 
+void HumanReadableMap16::from_map16::write_header_file(std::shared_ptr<Header> header, const fs::path header_path) {
+	FILE* fp;
+	fopen_s(&fp, header_path.string().c_str(), "w");
+
+	fprintf(
+		fp,
+		"file_format_version_number: %X\n" \
+		"game_id: %X\n" \
+		"program_version: %X\n" \
+		"program_id: %X\n" \
+		"size_x: %X\n" \
+		"size_y: %X\n" \
+		"base_x: %X\n" \
+		"base_y: %X\n" \
+		"is_full_game_export: %X\n" \
+		"has_tileset_specific_page_2: %X\n" \
+		"comment_field: \"%s\"\n",
+		header->file_format_version_number,
+		header->game_id,
+		header->program_version,
+		header->program_id,
+		header->size_x,
+		header->size_y,
+		header->base_x,
+		header->base_y,
+		is_full_game_export(header),
+		has_tileset_specific_page_2s(header),
+		header->comment.c_str()
+	);
+
+	fclose(fp);
+}
+
 void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs::path output_directory) {
 	std::vector<Byte> bytes = read_binary_file(input_file);
 	auto header = get_header_from_map16_buffer(bytes);
@@ -343,14 +384,19 @@ void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs
 	fs::create_directory(output_directory);
 	_wchdir(output_directory.c_str());
 
+	fs::path header_path = output_directory;
+	header_path /= "header.txt";
+	write_header_file(header, header_path);
+
 	fs::create_directory("global_pages");
-	fs::create_directory("tileset_group_specific_pages");
+	fs::create_directory("global_pages\\FG_pages");
+	fs::create_directory("global_pages\\BG_pages");
+	fs::create_directory("tileset_group_specific_tiles");
 
 	if (has_tileset_specific_page_2s(header)) {
-		fs::create_directory("tileset_specific_pages");
+		fs::create_directory("tileset_specific_tiles");
 	}
 	fs::create_directory("pipe_tiles");
-
 
 	const auto offset_size_table = get_offset_size_table(bytes, header);
 

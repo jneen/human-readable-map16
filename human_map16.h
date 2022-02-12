@@ -106,12 +106,17 @@ namespace HumanReadableMap16 {
 
 		// optional data here (comment field)
 
+		std::string comment;
+
 		// 0x30 bytes copyright string (will insert fine without)
 	};
 
 	class from_map16 {
 		private:
 			static bool has_tileset_specific_page_2s(std::shared_ptr<Header> header);
+			static bool is_full_game_export(std::shared_ptr<Header> header);
+
+			static void write_header_file(std::shared_ptr<Header> header, const fs::path header_path);
 
 			static std::vector<Byte> read_binary_file(const fs::path file);
 			static _4Bytes join_bytes(ByteIterator begin, ByteIterator end);
