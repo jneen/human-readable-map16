@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "human_map16.h"
+#include "human_readable_map16.h"
 
 bool HumanReadableMap16::has_tileset_specific_page_2s(std::shared_ptr<HumanReadableMap16::Header> header) {
 	return header->various_flags_and_info & 1;
