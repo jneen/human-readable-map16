@@ -285,8 +285,37 @@ unsigned int HumanReadableMap16::to_map16::parse_BG_pages(std::vector<Byte>& bg_
 	return curr_tile_number;
 }
 
-unsigned int HumanReadableMap16::to_map16::parse_FG_pages(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec, 
-	unsigned int base_tile_number, bool page_2_is_tileset_specific) {
+unsigned int HumanReadableMap16::to_map16::parse_FG_pages(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec, unsigned int base_tile_number) {
+	const auto sorted_paths = get_sorted_paths("global_pages\\FG_pages");
+
+	unsigned int curr_tile_number = base_tile_number;
+
+	std::unordered_set<_2Bytes> tileset_group_specific = std::unordered_set<_2Bytes>(TILESET_GROUP_SPECIFIC_TILES.begin(), TILESET_GROUP_SPECIFIC_TILES.end());
+
+	for (const auto& entry : sorted_paths) {
+		std::fstream page_file;
+		page_file.open(entry);
+
+		std::string line;
+		while (std::getline(page_file, line)) {
+			if (tileset_group_specific.count(curr_tile_number)) {
+				convert_full(fg_tiles_vec, acts_like_vec, line, curr_tile_number++);
+			}
+			else {
+				convert_acts_like_only(acts_like_vec, line, curr_tile_number++);
+				fg_tiles_vec.insert(fg_tiles_vec.end(), { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });  // tiles are tileset (group) specific, disregard!
+			}
+		}
+
+		page_file.close();
+	}
+
+	return curr_tile_number;
+}
+
+unsigned int HumanReadableMap16::to_map16::parse_FG_pages_tileset_specific_page_2(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec,
+	std::vector<Byte>& tileset_specific_tiles_vec, unsigned int base_tile_number) {
+
 	const auto sorted_paths = get_sorted_paths("global_pages\\FG_pages");
 
 	unsigned int curr_tile_number = base_tile_number;
@@ -301,12 +330,27 @@ unsigned int HumanReadableMap16::to_map16::parse_FG_pages(std::vector<Byte>& fg_
 		while (std::getline(page_file, line)) {
 			bool not_on_page_2 = curr_tile_number < 0x200 || curr_tile_number >= 0x300;
 
-			if (tileset_group_specific.count(curr_tile_number) == 0 && (not_on_page_2 || !page_2_is_tileset_specific)) {
+			if (tileset_group_specific.count(curr_tile_number) == 0 && not_on_page_2) {
 				convert_full(fg_tiles_vec, acts_like_vec, line, curr_tile_number++);
 			}
 			else {
 				convert_acts_like_only(acts_like_vec, line, curr_tile_number++);
-				fg_tiles_vec.insert(fg_tiles_vec.end(), { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });  // tiles are tileset (group) specific, disregard!
+				if (not_on_page_2) {
+					// tiles are tileset (group) specific on page 0 or 1, will be handled in the tileset_group_specific_tiles!
+					fg_tiles_vec.insert(fg_tiles_vec.end(), { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });  
+				}
+				else {
+					// we're on page 2, LM has a bug (?) that seems to make it so page 2 of the FG block gets written to 
+					// tileset E's page 2 if the tileset specific page 2 setting is enabled, so if we don't copy that page 
+					// to this section right here it will get overwritten, so I guess we'll do that for now??
+					size_t tileset_E_tile_start = 0xE * PAGE_SIZE * _16x16_BYTE_SIZE + (curr_tile_number - 0x200 - 1) * _16x16_BYTE_SIZE;
+					size_t tileset_E_tile_end = 0xE * PAGE_SIZE * _16x16_BYTE_SIZE + (curr_tile_number - 0x200) * _16x16_BYTE_SIZE;
+
+					fg_tiles_vec.insert(fg_tiles_vec.end(), 
+						tileset_specific_tiles_vec.begin() + tileset_E_tile_start, 
+						tileset_specific_tiles_vec.begin() + tileset_E_tile_end
+					);
+				}
 			}
 		}
 
@@ -516,18 +560,23 @@ void HumanReadableMap16::to_map16::convert(const fs::path input_path, const fs::
 	std::vector<Byte> fg_tiles_vec{}, bg_tiles_vec{}, acts_like_vec{}, tileset_specific_vec{},
 		tileset_group_specific_vec{}, diagonal_pipe_tiles_vec{}, pipe_tiles_vec{};
 
+	if (has_tileset_specific_page_2s(header)) {
+		parse_tileset_specific_pages(tileset_specific_vec);
+	}
+
 	unsigned int curr_tile_number = 0;
 
-	curr_tile_number = parse_FG_pages(fg_tiles_vec, acts_like_vec, curr_tile_number, has_tileset_specific_page_2s(header));
+	if (!has_tileset_specific_page_2s(header)) {
+		curr_tile_number = parse_FG_pages(fg_tiles_vec, acts_like_vec, curr_tile_number);
+	}
+	else {
+		curr_tile_number = parse_FG_pages_tileset_specific_page_2(fg_tiles_vec, acts_like_vec, tileset_specific_vec, curr_tile_number);
+	}
 	parse_BG_pages(bg_tiles_vec, curr_tile_number);
 
 	parse_tileset_group_specific_pages(tileset_group_specific_vec, diagonal_pipe_tiles_vec, fg_tiles_vec);
 
 	duplicate_tileset_group_specific_pages(tileset_group_specific_vec);
-
-	if (has_tileset_specific_page_2s(header)) {
-		parse_tileset_specific_pages(tileset_specific_vec);
-	}
 
 	parse_normal_pipe_tiles(pipe_tiles_vec);
 

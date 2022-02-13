@@ -185,7 +185,9 @@ namespace HumanReadableMap16 {
 			static void verify_tiles_only(const std::string line, unsigned int expected_tile_number);
 
 			static unsigned int parse_BG_pages(std::vector<Byte>& bg_tiles_vec, unsigned int base_tile_number);
-			static unsigned int parse_FG_pages(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec, unsigned int base_tile_number, bool page_2_is_tileset_specific);
+			static unsigned int parse_FG_pages(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec, unsigned int base_tile_number);
+			static unsigned int parse_FG_pages_tileset_specific_page_2(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec, 
+				std::vector<Byte>& tileset_specific_tiles_vec, unsigned int base_tile_number);
 
 			static void parse_tileset_group_specific_pages(std::vector<Byte>& tileset_group_specific_tiles_vec, 
 				std::vector<Byte>& diagonal_pipe_tiles_vec, const std::vector<Byte>& fg_tiles_vec);
