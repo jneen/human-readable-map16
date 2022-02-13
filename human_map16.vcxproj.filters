@@ -21,9 +21,6 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="human_map16.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="arrays.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -51,6 +48,9 @@
     <ClInclude Include="human_map16_exception.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="human_readable_map16.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="from_map16.cpp">
@@ -62,7 +62,7 @@
     <ClCompile Include="to_map16.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="human_map16.cpp">
+    <ClCompile Include="human_readable_map16.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
