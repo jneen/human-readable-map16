@@ -2,14 +2,6 @@
 #include "human_map16.h"
 #include "arrays.h"
 
-bool HumanReadableMap16::from_map16::has_tileset_specific_page_2s(std::shared_ptr<Header> header) {
-	return header->various_flags_and_info & 1;
-}
-
-bool HumanReadableMap16::from_map16::is_full_game_export(std::shared_ptr<Header> header) {
-	return header->various_flags_and_info & 2;
-}
-
 HumanReadableMap16::_4Bytes HumanReadableMap16::from_map16::join_bytes(ByteIterator begin, ByteIterator end) {
 	_4Bytes t = 0;
 	unsigned int i = 0;
@@ -376,15 +368,15 @@ void HumanReadableMap16::from_map16::write_header_file(std::shared_ptr<Header> h
 	fclose(fp);
 }
 
-void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs::path output_directory) {
+void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs::path output_path) {
 	std::vector<Byte> bytes = read_binary_file(input_file);
 	auto header = get_header_from_map16_buffer(bytes);
 
-	fs::remove_all(output_directory);
-	fs::create_directory(output_directory);
-	_wchdir(output_directory.c_str());
+	fs::remove_all(output_path);
+	fs::create_directory(output_path);
+	_wchdir(output_path.c_str());
 
-	fs::path header_path = output_directory;
+	fs::path header_path = output_path;
 	header_path /= "header.txt";
 	write_header_file(header, header_path);
 

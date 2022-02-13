@@ -31,6 +31,7 @@ namespace HumanReadableMap16 {
 	constexpr const char* NO_TILES_FORMAT = "%04X: %03X\n";
 
 	constexpr const char* LM_EMPTY_TILE_FORMAT = "%04X: ~\n";
+	constexpr const char* LM_EMTPY_TILE_FORMAT_NO_NEWLINE = "%04X: ~";
 	constexpr _2Bytes LM_EMPTY_TILE_ACTS_LIKE = 0x130;
 	constexpr _2Bytes LM_EMPTY_TILE_WORD = 0x1004;
 
@@ -83,12 +84,14 @@ namespace HumanReadableMap16 {
 
 	constexpr size_t COMMENT_FIELD_OFFSET = VARIOUS_FLAGS_AND_INFO_OFFSET + VARIOUS_FLAGS_AND_INFO_SIZE + UNUSED_AREA_SIZE;
 
+	constexpr size_t OFFSET_SIZE_TABLE_SIZE = 0x40;
+
 	struct Header {
-		const char* lm16;
-		_2Bytes file_format_version_number;
-		_2Bytes game_id;
-		_2Bytes program_version;
-		_2Bytes program_id;
+		const char* lm16 = "LM16";
+		_4Bytes file_format_version_number;
+		_4Bytes game_id;
+		_4Bytes program_version;
+		_4Bytes program_id;
 		_4Bytes extra_flags;
 
 		_4Bytes offset_size_table_offset;
@@ -111,11 +114,11 @@ namespace HumanReadableMap16 {
 		// 0x30 bytes copyright string (will insert fine without)
 	};
 
+	bool has_tileset_specific_page_2s(std::shared_ptr<Header> header);
+	bool is_full_game_export(std::shared_ptr<Header> header);
+
 	class from_map16 {
 		private:
-			static bool has_tileset_specific_page_2s(std::shared_ptr<Header> header);
-			static bool is_full_game_export(std::shared_ptr<Header> header);
-
 			static void write_header_file(std::shared_ptr<Header> header, const fs::path header_path);
 
 			static std::vector<Byte> read_binary_file(const fs::path file);
@@ -125,6 +128,7 @@ namespace HumanReadableMap16 {
 
 			static bool try_LM_empty_convert(FILE* fp, unsigned int tile_number, _2Bytes acts_like, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4);
 			static bool try_LM_empty_convert(FILE* fp, unsigned int tile_number, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4);
+
 			static void convert_to_file(FILE* fp, unsigned int tile_numer, _2Bytes acts_like, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4);
 			static void convert_to_file(FILE* fp, unsigned int tile_numer, _2Bytes acts_like);
 			static void convert_to_file(FILE* fp, unsigned int tile_numer, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4);
@@ -151,12 +155,58 @@ namespace HumanReadableMap16 {
 			static void convert_first_two_non_tileset_specific(std::vector<Byte> map16_buffer, size_t tileset_group_specific_pair, size_t acts_like_pair);
 
 		public:
-			static void convert(const fs::path input_file, const fs::path output_directory);
+			static void convert(const fs::path input_file, const fs::path output_path);
 	};
 
 	class to_map16 {
+		private:
+			static std::shared_ptr<Header> parse_header_file(const fs::path header_path);
+			static void verify_header_file(const fs::path header_path);
 
+			// static void get_line_or_throw(std::fstream* stream, std::string& string, const fs::path file_path, unsigned int curr_line_number);
 
-		static void convert(const fs::path input_directory, const fs::path output_file);
+			static std::vector<fs::path> get_sorted_paths(const fs::path directory);
+
+			static void split_and_insert_2(_2Bytes bytes, std::vector<Byte>& byte_vec);
+			static void split_and_insert_4(_4Bytes bytes, std::vector<Byte>& byte_vec);
+
+			static _2Bytes to_bytes(_2Bytes _8x8_tile_number, unsigned int palette, char x_flip, char y_flip, char priority);
+
+			static bool try_LM_empty_convert_full(std::vector<Byte>& tiles_vec, std::vector<Byte>& acts_like_vec, const std::string line, unsigned int expected_tile_number);
+			static bool try_LM_empty_convert_tiles_only(std::vector<Byte>& tiles_vec, const std::string line, unsigned int expected_tile_number);
+
+			static void convert_full(std::vector<Byte>& tiles_vec, std::vector<Byte>& acts_like_vec, const std::string line, unsigned int expected_tile_number);
+			static void verify_full(const std::string line, unsigned int expected_tile_number);
+
+			static void convert_acts_like_only(std::vector<Byte>& acts_like_vec, const std::string line, unsigned int expected_tile_number);
+			static void verify_acts_like_only(const std::string line, unsigned int expected_tile_number);
+
+			static void convert_tiles_only(std::vector<Byte>& tiles_vec, const std::string line, unsigned int expected_tile_number);
+			static void verify_tiles_only(const std::string line, unsigned int expected_tile_number);
+
+			static unsigned int parse_BG_pages(std::vector<Byte>& bg_tiles_vec, unsigned int base_tile_number);
+			static unsigned int parse_FG_pages(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec, unsigned int base_tile_number, bool page_2_is_tileset_specific);
+
+			static void parse_tileset_group_specific_pages(std::vector<Byte>& tileset_group_specific_tiles_vec, 
+				std::vector<Byte>& diagonal_pipe_tiles_vec, const std::vector<Byte>& fg_tiles_vec);
+
+			static void duplicate_tileset_group_specific_pages(std::vector<Byte>& tileset_group_specific_tiles_vec);
+
+			static void parse_tileset_specific_pages(std::vector<Byte>& tileset_specific_tiles_vec);
+
+			static void parse_normal_pipe_tiles(std::vector<Byte>& pipe_tiles_vec);
+
+			static std::vector<Byte> get_offset_size_vec(size_t header_size, size_t fg_tiles_size,
+				size_t bg_tiles_size, size_t acts_like_size, size_t tileset_specific_size, size_t tileset_group_specific_size, size_t normal_pipe_tiles_size,
+				size_t diagonal_pipe_tiles_size);
+
+			static std::vector<Byte> get_header_vec(std::shared_ptr<Header> header);
+
+			static std::vector<Byte> combine(std::vector<Byte> header_vec, std::vector<Byte> offset_size_vec, std::vector<Byte> fg_tiles_vec, 
+				std::vector<Byte> bg_tiles_vec, std::vector<Byte> acts_like_vec, std::vector<Byte> tileset_specific_vec, 
+				std::vector<Byte> tileset_group_specific_vec, std::vector<Byte> normal_pipe_tiles_vec, std::vector<Byte> diagonal_pipe_tiles_vec);
+
+		public: 
+			static void convert(const fs::path input_path, const fs::path output_file);
 	};
 }

@@ -24,3 +24,7 @@ const static std::array DIAGONAL_PIPE_TILES {
 const static std::array NORMAL_PIPE_TILES {
 	0x133, 0x134, 0x135, 0x136, 0x137, 0x138, 0x139, 0x13A
 };
+
+const static std::array DUPLICATE_TILESETS {
+	4, 2, 0, 2, 3, 3, 3, 0, 4, 3
+};
