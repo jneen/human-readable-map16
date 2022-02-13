@@ -298,7 +298,7 @@ unsigned int HumanReadableMap16::to_map16::parse_FG_pages(std::vector<Byte>& fg_
 
 		std::string line;
 		while (std::getline(page_file, line)) {
-			if (tileset_group_specific.count(curr_tile_number)) {
+			if (tileset_group_specific.count(curr_tile_number) == 0) {
 				convert_full(fg_tiles_vec, acts_like_vec, line, curr_tile_number++);
 			}
 			else {
@@ -476,8 +476,13 @@ std::vector<HumanReadableMap16::Byte> HumanReadableMap16::to_map16::get_offset_s
 	std::vector<Byte> offset_size_vec{};
 
 	for (const auto& entry : vec) {
-		split_and_insert_4(entry.first, offset_size_vec);
-		split_and_insert_4(entry.second, offset_size_vec);
+		if (vec.size() != 0) {
+			split_and_insert_4(entry.first, offset_size_vec);
+			split_and_insert_4(entry.second, offset_size_vec);
+		}
+		else {
+			offset_size_vec.insert(offset_size_vec.end(), { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
+		}
 	}
 
 	return offset_size_vec;
