@@ -558,6 +558,8 @@ std::vector<HumanReadableMap16::Byte> HumanReadableMap16::to_map16::combine(std:
 }
 
 void HumanReadableMap16::to_map16::convert(const fs::path input_path, const fs::path output_file) {
+	fs::path original_working_dir = fs::current_path();
+
 	_wchdir(input_path.c_str());
 
 	auto header = parse_header_file("header.txt");
@@ -592,6 +594,8 @@ void HumanReadableMap16::to_map16::convert(const fs::path input_path, const fs::
 
 	const auto combined = combine(header_vec, offset_size_vec, fg_tiles_vec, bg_tiles_vec, acts_like_vec, tileset_specific_vec,
 		tileset_group_specific_vec, pipe_tiles_vec, diagonal_pipe_tiles_vec);
+
+	_wchdir(original_working_dir.c_str());
 
 	std::ofstream map16_file(output_file, std::ios::out | std::ios::binary);
 	map16_file.write(reinterpret_cast<const char *>(combined.data()), combined.size());

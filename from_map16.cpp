@@ -376,9 +376,7 @@ void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs
 	fs::create_directory(output_path);
 	_wchdir(output_path.c_str());
 
-	fs::path header_path = output_path;
-	header_path /= "header.txt";
-	write_header_file(header, header_path);
+	write_header_file(header, "header.txt");
 
 	fs::create_directory("global_pages");
 	fs::create_directory("global_pages\\FG_pages");
