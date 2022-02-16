@@ -250,11 +250,11 @@ void HumanReadableMap16::to_map16::verify_8x8_tiles(const std::string line, unsi
 		}
 		catch (const std::out_of_range&) {
 			curr_char_idx = line.size();
-			throw TileError("Unexpected end of 16x16 tile while verifying 8x8 tiles", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+			throw TileError("Unexpected end of 16x16 tile while verifying 8x8 tiles", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 
 		if (found != c) {
-			throw TileError("Unexpected character near opening '{' character", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+			throw TileError("Unexpected character near opening '{' character", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 		++curr_char_idx;
 	}
@@ -273,16 +273,16 @@ void HumanReadableMap16::to_map16::verify_8x8_tiles(const std::string line, unsi
 		}
 		catch (const std::out_of_range&) {
 			curr_char_idx = line.size();
-			throw TileError("Unexpected end of 16x16 tile while verifying 8x8 tiles", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+			throw TileError("Unexpected end of 16x16 tile while verifying 8x8 tiles", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 
 		if (whitespace.size() != 2) {
 			curr_char_idx = line.size();
-			throw TileError("Unexpected end of 16x16 tile while verifying 8x8 tiles", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+			throw TileError("Unexpected end of 16x16 tile while verifying 8x8 tiles", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 
 		if (whitespace != std::string("  ")) {
-			throw TileError("Incorrect whitespace in 8x8 tiles specification", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+			throw TileError("Incorrect whitespace in 8x8 tiles specification", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 		curr_char_idx += 2;
 	}
@@ -295,11 +295,11 @@ void HumanReadableMap16::to_map16::verify_8x8_tiles(const std::string line, unsi
 		}
 		catch (const std::out_of_range&) {
 			curr_char_idx = line.size();
-			throw  TileError("Unexpected end of 16x16 tile while verifying 8x8 tiles", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+			throw  TileError("Unexpected end of 16x16 tile while verifying 8x8 tiles", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 
 		if (found != c) {
-			throw  TileError("Unexpected character near closing '}' character", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+			throw  TileError("Unexpected character near closing '}' character", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 		++curr_char_idx;
 	}
@@ -322,7 +322,7 @@ void HumanReadableMap16::to_map16::verify_tile_number(const std::string line, un
 		}
 
 		if (found != c) {
-			throw  TileError("Unexpected tile number", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
+			throw  TileError("Unexpected tile number or format", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 		++curr_char_idx;
 	}
@@ -351,8 +351,10 @@ void HumanReadableMap16::to_map16::verify_acts_like(const std::string line, unsi
 	unsigned int acts_digit_1, acts_digit_2, acts_digit_3;
 	unsigned int res = sscanf_s(acts_like.c_str(), "%1X%1X%1X", &acts_digit_1, &acts_digit_2, &acts_digit_3);
 
-	if (res != 3) {
-		throw  TileError("Acts like setting must be exactly 3 (uppercase) hexademical digits", file, line_number, 
+	bool is_all_uppercase = std::all_of(acts_like.begin(), acts_like.end(), [](unsigned char c) { return std::isupper(c) || std::isdigit(c); });
+
+	if (res != 3 || !is_all_uppercase) {
+		throw  TileError("Acts like setting must be exactly 3 uppercase hexademical digits", file, line_number, 
 			line, curr_char_idx, tile_format, expected_tile_number);
 	}
 
@@ -371,9 +373,10 @@ void HumanReadableMap16::to_map16::verify_8x8_tile(const std::string line, unsig
 
 	size_t tile_start = curr_char_idx;
 
-	std::string tile_substr;
+	std::string tile_substr, tile_number_substr;
 	try {
 		tile_substr = line.substr(tile_start, 9);
+		tile_number_substr = line.substr(tile_start, 3);
 	}
 	catch (const std::out_of_range&) {
 		curr_char_idx = line.size();
@@ -387,6 +390,13 @@ void HumanReadableMap16::to_map16::verify_8x8_tile(const std::string line, unsig
 		throw  TileError("Unexpected end of 16x16 tile specification while verifying 8x8 tile specification",
 			file, line_number, line, curr_char_idx, tile_format, expected_tile_number
 		);
+	}
+
+	bool is_all_uppercase = std::all_of(tile_number_substr.begin(), tile_number_substr.end(), [](unsigned char c) { return std::isupper(c) || std::isdigit(c); });
+
+	if (!is_all_uppercase) {
+		throw  TileError("8x8 tile number must be exactly 3 uppercase hexademical digits", file, line_number,
+			line, curr_char_idx, tile_format, expected_tile_number);
 	}
 
 	unsigned int _8x8_tile_digit_1, _8x8_tile_digit_2, _8x8_tile_digit_3, palette;
