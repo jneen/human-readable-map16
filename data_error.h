@@ -20,7 +20,7 @@ public:
 		in_file = file;
 		_line_number = line_number;
 		incorrect_line = line;
-		_char_index = char_index;
+		_char_index = char_index + 1;
 	}
 
 	const std::string get_message() {
