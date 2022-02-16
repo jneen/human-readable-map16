@@ -52,7 +52,7 @@
 /*
 void HumanReadableMap16::to_map16::get_line_or_throw(std::fstream* stream, std::string& string, const fs::path file_path, unsigned int curr_line_number) {
 	if (!std::getline(*stream, string)) {
-		throw new DataError("Unexpected end of file", file_path, curr_line_number + 1, "", 0);
+		throw  DataError("Unexpected end of file", file_path, curr_line_number + 1, "", 0);
 	}
 }
 */
@@ -176,9 +176,9 @@ HumanReadableMap16::_2Bytes HumanReadableMap16::to_map16::to_bytes(_2Bytes _8x8_
 }
 
 void HumanReadableMap16::to_map16::convert_full(std::vector<Byte>& tiles_vec, std::vector<Byte>& acts_like_vec, 
-	const std::string line, unsigned int expected_tile_number) {
+	const std::string line, unsigned int expected_tile_number, unsigned int line_number, const fs::path file) {
 
-	// verify_full(line, expected_tile_number);  // no verfication yet (dreading it)
+	verify_full(line, line_number, file, expected_tile_number);  // no verfication yet (dreading it)
 
 	if (try_LM_empty_convert_full(tiles_vec, acts_like_vec, line, expected_tile_number)) {
 		return;
@@ -204,12 +204,231 @@ void HumanReadableMap16::to_map16::convert_full(std::vector<Byte>& tiles_vec, st
 	split_and_insert_2(acts_like, acts_like_vec);
 }
 
-void HumanReadableMap16::to_map16::verify_full(const std::string line, unsigned int expected_tile_number) {
-	// TODO
+void HumanReadableMap16::to_map16::verify_full(const std::string line, unsigned int line_number, const fs::path file, 
+	unsigned int expected_tile_number) {
+
+	unsigned int curr_char_idx = 0;
+	verify_tile_number(line, line_number, file, curr_char_idx, TileFormat::FULL, expected_tile_number);
+	
+	char potential_shorthand_char;
+	try {
+		potential_shorthand_char = line.at(curr_char_idx);
+	}
+	catch (const std::out_of_range&) {
+		throw TileError("Unexpected end of tile line while checking for empty tile shorthand symbol",
+			file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+	}
+	if (potential_shorthand_char == LM_EMPTY_TILE_SHORTHAND) {
+		if (line.size() == 7) {
+			// valid empty tile shorthand, return
+			return;
+		}
+		else {
+			throw TileError("Unexpected characters/whitespace after valid empty tile shorthand symbol (~)", 
+				file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+		}
+	}
+
+	verify_acts_like(line, line_number, file, curr_char_idx, TileFormat::FULL, expected_tile_number);
+	verify_8x8_tiles(line, line_number, file, curr_char_idx, TileFormat::FULL, expected_tile_number);
+
+	if (curr_char_idx != line.size()) {
+		throw TileError("Unexpected characters/whitespace after valid tile specification found",
+			file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+	}
 }
 
-void HumanReadableMap16::to_map16::convert_acts_like_only(std::vector<Byte>& acts_like_vec, const std::string line, unsigned int expected_tile_number) {
-	// verify_acts_like_only(line, expected_tile_number);
+void HumanReadableMap16::to_map16::verify_8x8_tiles(const std::string line, unsigned int line_number, const fs::path file, 
+	unsigned int& curr_char_idx, TileFormat tile_format, unsigned int expected_tile_number) {
+
+	std::string opening_bracket = " { ";
+	for (const auto c : opening_bracket) {
+		char found;
+		try {
+			found = line.at(curr_char_idx);
+		}
+		catch (const std::out_of_range&) {
+			throw TileError("Unexpected end of tile line while verifying 8x8 tiles", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+		}
+
+		if (found != c) {
+			throw TileError("Unexpected character near opening '{' character", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+		}
+		++curr_char_idx;
+	}
+
+	for (int i = 0; i != 4; i++) {
+		verify_8x8_tile(line, line_number, file, expected_tile_number, curr_char_idx, tile_format);
+		
+		if (i == 3) {
+			// last tile gets separate whitespace check at the end, including the closing }
+			continue;
+		}
+
+		std::string whitespace;
+		try {
+			whitespace = line.substr(curr_char_idx, 2);
+		}
+		catch (const std::out_of_range&) {
+			throw TileError("Unexpected end of tile line while verifying 8x8 tiles", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+		}
+
+		if (whitespace.size() != 2) {
+			throw TileError("Unexpected end of tile line while verifying 8x8 tiles", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+		}
+
+		if (whitespace != std::string("  ")) {
+			throw TileError("Incorrect white space in 8x8 tiles specification", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+		}
+		curr_char_idx += 2;
+	}
+
+	std::string closing_bracket = " }";
+	for (const auto c : closing_bracket) {
+		char found;
+		try {
+			found = line.at(curr_char_idx);
+		}
+		catch (const std::out_of_range&) {
+			throw  TileError("Unexpected end of tile line while verifying 8x8 tiles", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+		}
+
+		if (found != c) {
+			throw  TileError("Unexpected character near closing '}' character", file, line_number, line, curr_char_idx, TileFormat::FULL, expected_tile_number);
+		}
+		++curr_char_idx;
+	}
+}
+
+void HumanReadableMap16::to_map16::verify_tile_number(const std::string line, unsigned int line_number, const fs::path file, unsigned int& curr_char_idx,
+	TileFormat tile_format, unsigned int expected_tile_number) {
+	char tile_number_part[7];
+	sprintf_s(tile_number_part, "%04X: ", expected_tile_number);
+	std::string tile_number_p = std::string(tile_number_part);
+
+	for (const char c : tile_number_p) {
+		char found;
+		try {
+			found = line.at(curr_char_idx);
+		}
+		catch (const std::out_of_range&) {
+			throw  TileError("Unexpected end of tile line while verifying tile number", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
+		}
+
+		if (found != c) {
+			throw  TileError("Unexpected tile number", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
+		}
+		++curr_char_idx;
+	}
+}
+
+void HumanReadableMap16::to_map16::verify_acts_like(const std::string line, unsigned int line_number, const fs::path file, unsigned int& curr_char_idx, 
+	TileFormat tile_format, unsigned int expected_tile_number) {
+
+	std::string acts_like;
+	try {
+		acts_like = line.substr(6, 3);
+	}
+	catch (const std::out_of_range&) {
+		throw  TileError("Unexpected end of 16x16 tile specification", file, line_number, line, 
+			curr_char_idx, tile_format, expected_tile_number);
+	}
+
+	if (acts_like.size() != 3) {
+		throw  TileError("Unexpected end of 16x16 tile specification",
+			file, line_number, line, curr_char_idx, tile_format, expected_tile_number
+		);
+	}
+
+	unsigned int acts;
+	unsigned int res = sscanf_s(acts_like.c_str(), "%03X", &acts);
+
+	if (res != 1) {
+		throw  TileError("Unexpected string encountered instead of acts like setting", file, line_number, 
+			line, curr_char_idx, tile_format, expected_tile_number);
+	}
+
+	if (acts >= 0x200) {
+		throw  TileError("Unexpected acts like setting >= 0x200", file, line_number, line, 
+			curr_char_idx, tile_format, expected_tile_number);
+	}
+
+	curr_char_idx += 3;
+}
+
+void HumanReadableMap16::to_map16::verify_8x8_tile(const std::string line, unsigned int line_number, const fs::path file,
+	unsigned int expected_tile_number, unsigned int& curr_char_idx, TileFormat tile_format) {
+
+	size_t tile_start = curr_char_idx;
+
+	std::string tile_substr;
+	try {
+		tile_substr = line.substr(tile_start, 9);
+	}
+	catch (const std::out_of_range&) {
+		throw  TileError("Unexpected end of 16x16 tile specification",
+			file, line_number, line, curr_char_idx, tile_format, expected_tile_number
+		);
+	}
+
+	if (tile_substr.size() != 9) {
+		throw  TileError("Unexpected end of 16x16 tile specification",
+			file, line_number, line, curr_char_idx, tile_format, expected_tile_number
+		);
+	}
+
+	unsigned int _8x8_tile, palette;
+	char x, y, p;
+
+	unsigned int res = sscanf_s(tile_substr.c_str(), "%03X %X %c%c%c",
+		&_8x8_tile, &palette,
+		&x, 1, &y, 1, &p, 1
+	);
+
+	if (res != 5) {
+		throw  TileError("Incorrect 8x8 tile specification", file, line_number,
+			line, curr_char_idx, tile_format, expected_tile_number);
+	}
+
+	if (_8x8_tile >= 0x400) {
+		throw  TileError("8x8 tile number may not be higher than 0x3FF", file, line_number,
+			line, curr_char_idx, tile_format, expected_tile_number);
+	}
+
+	curr_char_idx += 4;
+
+	if (palette > 7) {
+		throw  TileError("Palette number of 8x8 tile must be between 0 and 7", file, line_number,
+			line, curr_char_idx, tile_format, expected_tile_number);
+	}
+	
+	curr_char_idx += 2;
+
+	if (x != X_FLIP_ON && x != X_FLIP_OFF) {
+		throw  TileError("Flag for x flip must be either 'x' or '-'", file, line_number,
+			line, curr_char_idx, tile_format, expected_tile_number);
+	}
+
+	++curr_char_idx;
+
+	if (y != Y_FLIP_ON && y != Y_FLIP_OFF) {
+		throw  TileError("Flag for y flip must be either 'y' or '-'", file, line_number,
+			line, curr_char_idx, tile_format, expected_tile_number);
+	}
+
+	++curr_char_idx;
+
+	if (p != PRIORITY_ON && p != PRIORITY_OFF) {
+		throw  TileError("Flag for priority must be either 'x' or '-'", file, line_number,
+			line, curr_char_idx, tile_format, expected_tile_number);
+	}
+
+	++curr_char_idx;
+}
+
+void HumanReadableMap16::to_map16::convert_acts_like_only(std::vector<Byte>& acts_like_vec, const std::string line, 
+	unsigned int expected_tile_number, unsigned int line_number, const fs::path file) {
+	verify_acts_like_only(line, line_number, file, expected_tile_number);
 
 	unsigned int _16x16_tile_number, acts_like;
 
@@ -220,12 +439,34 @@ void HumanReadableMap16::to_map16::convert_acts_like_only(std::vector<Byte>& act
 	split_and_insert_2(acts_like, acts_like_vec);
 }
 
-void HumanReadableMap16::to_map16::verify_acts_like_only(const std::string line, unsigned int expected_tile_number) {
-	// TODO
+void HumanReadableMap16::to_map16::verify_acts_like_only(const std::string line, unsigned int line_number, const fs::path file, unsigned int expected_tile_number) {
+	unsigned int curr_char_idx = 0;
+	verify_tile_number(line, line_number, file, curr_char_idx, TileFormat::ACTS_LIKE_ONLY, expected_tile_number);
+
+	char potential_shorthand_char;
+	try {
+		potential_shorthand_char = line.at(curr_char_idx);
+	}
+	catch (const std::out_of_range&) {
+		throw  TileError("Unexpected end of tile line while checking for empty tile shorthand symbol",
+			file, line_number, line, curr_char_idx, TileFormat::ACTS_LIKE_ONLY, expected_tile_number);
+	}
+	if (potential_shorthand_char == LM_EMPTY_TILE_SHORTHAND) {
+		throw  TileError("Empty tile shorthand symbol (~) not allowed for acts like only tile specifications",
+			file, line_number, line, curr_char_idx, TileFormat::ACTS_LIKE_ONLY, expected_tile_number);
+	}
+
+	verify_acts_like(line, line_number, file, curr_char_idx, TileFormat::ACTS_LIKE_ONLY, expected_tile_number);
+
+	if (curr_char_idx != line.size()) {
+		throw  TileError("Unexpected characters/whitespace after valid tile specification found",
+			file, line_number, line, curr_char_idx, TileFormat::ACTS_LIKE_ONLY, expected_tile_number);
+	}
 }
 
-void HumanReadableMap16::to_map16::convert_tiles_only(std::vector<Byte>& tiles_vec, const std::string line, unsigned int expected_tile_number) {
-	// verify_tiles_only(line, expected_tile_number);  // no verfication yet (dreading it)
+void HumanReadableMap16::to_map16::convert_tiles_only(std::vector<Byte>& tiles_vec, const std::string line, 
+	unsigned int expected_tile_number, unsigned int line_number, const fs::path file) {
+	verify_tiles_only(line, line_number, file, expected_tile_number);
 
 	if (try_LM_empty_convert_tiles_only(tiles_vec, line, expected_tile_number)) {
 		return;
@@ -249,8 +490,53 @@ void HumanReadableMap16::to_map16::convert_tiles_only(std::vector<Byte>& tiles_v
 	split_and_insert_2(to_bytes(_8x8_tile_4, palette_4, x_4, y_4, p_4), tiles_vec);
 }
 
-void HumanReadableMap16::to_map16::verify_tiles_only(const std::string line, unsigned int expected_tile_number) {
-	// TODO
+void HumanReadableMap16::to_map16::verify_tiles_only(const std::string line, unsigned int line_number, const fs::path file, unsigned int expected_tile_number) {
+	unsigned int curr_char_idx = 0;
+	verify_tile_number(line, line_number, file, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
+
+	char potential_shorthand_char;
+	try {
+		potential_shorthand_char = line.at(curr_char_idx);
+	}
+	catch (const std::out_of_range&) {
+		throw  TileError("Unexpected end of tile line while checking for empty tile shorthand symbol", 
+			file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
+	}
+	if (potential_shorthand_char == LM_EMPTY_TILE_SHORTHAND) {
+		if (line.size() == 7) {
+			// valid empty tile shorthand, return
+			return;
+		}
+		else {
+			throw  TileError("Unexpected characters/whitespace after valid empty tile shorthand symbol (~)",
+				file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
+		}
+	}
+
+	std::string supposed_to_be_whitespace;
+	try {
+		supposed_to_be_whitespace = line.substr(6, 3);
+	}
+	catch (const std::out_of_range&) {
+		throw  TileError("Unexpected end of tile line while skipping over acts like field", file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
+	}
+
+	if (supposed_to_be_whitespace.size() != 3) {
+		throw  TileError("Unexpected end of tile line while skipping over acts like field", file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
+	}
+
+	if (supposed_to_be_whitespace != std::string("   ")) {
+		throw  TileError("Unexpected characters in acts like field that should be empty",
+			file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
+	}
+	curr_char_idx += 3;
+
+	verify_8x8_tiles(line, line_number, file, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
+
+	if (curr_char_idx != line.size()) {
+		throw  TileError("Unexpected characters/whitespace after valid tile specification found",
+			file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
+	}
 }
 
 std::vector<fs::path> HumanReadableMap16::to_map16::get_sorted_paths(const fs::path directory) {
@@ -275,8 +561,9 @@ unsigned int HumanReadableMap16::to_map16::parse_BG_pages(std::vector<Byte>& bg_
 		page_file.open(entry);
 
 		std::string line;
+		size_t line_no = 1;
 		while (std::getline(page_file, line)) {
-			convert_tiles_only(bg_tiles_vec, line, curr_tile_number++);
+			convert_tiles_only(bg_tiles_vec, line, curr_tile_number++, line_no++, entry);
 		}
 
 		page_file.close();
@@ -297,12 +584,13 @@ unsigned int HumanReadableMap16::to_map16::parse_FG_pages(std::vector<Byte>& fg_
 		page_file.open(entry);
 
 		std::string line;
+		size_t line_no = 1;
 		while (std::getline(page_file, line)) {
 			if (tileset_group_specific.count(curr_tile_number) == 0) {
-				convert_full(fg_tiles_vec, acts_like_vec, line, curr_tile_number++);
+				convert_full(fg_tiles_vec, acts_like_vec, line, curr_tile_number++, line_no++, entry);
 			}
 			else {
-				convert_acts_like_only(acts_like_vec, line, curr_tile_number++);
+				convert_acts_like_only(acts_like_vec, line, curr_tile_number++, line_no++, entry);
 				fg_tiles_vec.insert(fg_tiles_vec.end(), { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });  // tiles are tileset (group) specific, disregard!
 			}
 		}
@@ -327,14 +615,15 @@ unsigned int HumanReadableMap16::to_map16::parse_FG_pages_tileset_specific_page_
 		page_file.open(entry);
 
 		std::string line;
+		size_t line_no = 1;
 		while (std::getline(page_file, line)) {
 			bool not_on_page_2 = curr_tile_number < 0x200 || curr_tile_number >= 0x300;
 
 			if (tileset_group_specific.count(curr_tile_number) == 0 && not_on_page_2) {
-				convert_full(fg_tiles_vec, acts_like_vec, line, curr_tile_number++);
+				convert_full(fg_tiles_vec, acts_like_vec, line, curr_tile_number++, line_no++, entry);
 			}
 			else {
-				convert_acts_like_only(acts_like_vec, line, curr_tile_number++);
+				convert_acts_like_only(acts_like_vec, line, curr_tile_number++, line_no++, entry);
 				if (not_on_page_2) {
 					// tiles are tileset (group) specific on page 0 or 1, will be handled in the tileset_group_specific_tiles!
 					fg_tiles_vec.insert(fg_tiles_vec.end(), { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });  
@@ -373,13 +662,13 @@ void HumanReadableMap16::to_map16::parse_tileset_group_specific_pages(std::vecto
 		page_file.open(entry);
 
 		std::string line;
-
+		size_t line_no = 1;
 		for (unsigned int tile_number = 0; tile_number != PAGE_SIZE * 2; tile_number++) {
 			if (tileset_group_specific.count(tile_number) != 0) {
 				// if tile is tileset-group-specific, just take the tile spec from the file
 
 				std::getline(page_file, line);
-				convert_tiles_only(tileset_group_specific_tiles_vec, line, tile_number);
+				convert_tiles_only(tileset_group_specific_tiles_vec, line, tile_number, line_no++, entry);
 			}
 			else {
 				// if tile isn't tileset-group-specific, copy its spec from global fg pages vec
@@ -397,7 +686,7 @@ void HumanReadableMap16::to_map16::parse_tileset_group_specific_pages(std::vecto
 
 			for (const auto diagonal_pipe_tile_number : DIAGONAL_PIPE_TILES) {
 				std::getline(page_file, line);
-				convert_tiles_only(diagonal_pipe_tiles_vec, line, diagonal_pipe_tile_number);
+				convert_tiles_only(diagonal_pipe_tiles_vec, line, diagonal_pipe_tile_number, line_no++, entry);
 			}
 
 			first = false;
@@ -429,8 +718,9 @@ void HumanReadableMap16::to_map16::parse_tileset_specific_pages(std::vector<Byte
 		unsigned int curr_tile_number = 0x200;
 
 		std::string line;
+		size_t line_no = 1;
 		while (std::getline(page_file, line)) {
-			convert_tiles_only(tileset_specific_tiles_vec, line, curr_tile_number++);
+			convert_tiles_only(tileset_specific_tiles_vec, line, curr_tile_number++, line_no++, entry);
 		}
 
 		page_file.close();
@@ -445,10 +735,10 @@ void HumanReadableMap16::to_map16::parse_normal_pipe_tiles(std::vector<Byte>& pi
 		page_file.open(entry);
 
 		std::string line;
-
+		size_t line_no = 1;
 		for (const auto tile_number : NORMAL_PIPE_TILES) {
 			std::getline(page_file, line);
-			convert_tiles_only(pipe_tiles_vec, line, tile_number);
+			convert_tiles_only(pipe_tiles_vec, line, tile_number, line_no++, entry);
 		}
 
 		page_file.close();
@@ -601,3 +891,99 @@ void HumanReadableMap16::to_map16::convert(const fs::path input_path, const fs::
 	map16_file.write(reinterpret_cast<const char *>(combined.data()), combined.size());
 	map16_file.close();
 }
+
+/*
+#include <iostream>
+
+#define TEST(test_line) \
+try { \
+	test_line \
+} catch (TileError& t) {\
+	std::cout << t.get_line() << std::endl << t.get_message() << std::endl << std::endl; \
+}
+
+void HumanReadableMap16::to_map16::tests() {
+	std::string line1  = "0238: 130 { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";  // succeeds on full
+	//                    0238: 238 { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }
+	std::string line2  = "0238: 238 { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";  // fails on acts like
+	std::string line3  = "0238: 130 { 400 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";  // fails on first 8x8 tile number
+	std::string line4  = "0238: 130 { 182 8 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";  // fails on first palette
+	std::string line5  = "0238: 130 { 182 2 yxp  093 3 --p  239 5 x-p  3FF 3 -y- }";  // fails on first bits
+	std::string line6  = "0238: 130 { 182 2 xyp  093 3 --p  923 5 x-p  3FF 3 -y- }";  // fails on third 8x8 tile number
+
+	TEST(verify_full(line1, 1, "", 0x238););
+
+	TEST(verify_full(line2, 1, "", 0x238););
+	TEST(verify_full(line3, 1, "", 0x238););
+	TEST(verify_full(line4, 1, "", 0x238););
+	TEST(verify_full(line5, 1, "", 0x238););
+	TEST(verify_full(line6, 1, "", 0x238););
+
+	std::string line7  = "0238:     { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";  // succeeds on tiles only
+	std::string line8  = "0238:     { 482 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";  // fails on first 8x8 tile number
+	std::string line9  = "0238:     { 182 8 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";  // fails on first palette
+	std::string line10 = "0238:     { 182 2 yxp  093 3 --p  239 5 x-p  3FF 3 -y- }";  // fails on first bits
+	std::string line11 = "0238:     { 182 2 xyp  093 3 --p  923 5 x-p  3FF 3 -y- }";  // fails on third 8x8 tile number
+
+	TEST(verify_tiles_only(line7, 1, "", 0x238););
+	TEST(verify_tiles_only(line8, 1, "", 0x238););
+	TEST(verify_tiles_only(line9, 1, "", 0x238););
+	TEST(verify_tiles_only(line10, 1, "", 0x238););
+	TEST(verify_tiles_only(line11, 1, "", 0x238););
+
+	std::string line12 = "0238: 130"; // succeeds on acts like only
+	std::string line13 = "0238: 238"; // fails on acts like
+
+	TEST(verify_acts_like_only(line12, 1, "", 0x238););
+	TEST(verify_acts_like_only(line13, 1, "", 0x238););
+
+	std::string badac  = "0238: 138 ";
+
+	TEST(verify_acts_like_only(badac, 1, "", 0x238););
+
+	std::string shortc = "0238: ~";
+
+	TEST(verify_full(shortc, 1, "", 0x238););
+	TEST(verify_tiles_only(shortc, 1, "", 0x238););
+	TEST(verify_acts_like_only(shortc, 1, "", 0x238););
+
+	std::string bad_shortc1 = "0238:  ~";
+	std::string bad_shortc2 = "0238: ~ ";
+
+	TEST(verify_full(bad_shortc1, 1, "", 0x238););
+	TEST(verify_tiles_only(bad_shortc1, 1, "", 0x238););
+	TEST(verify_acts_like_only(bad_shortc1, 1, "", 0x238););
+
+	TEST(verify_full(bad_shortc2, 1, "", 0x238););
+	TEST(verify_tiles_only(bad_shortc2, 1, "", 0x238););
+	TEST(verify_acts_like_only(bad_shortc2, 1, "", 0x238););
+
+	std::string bad1   = "0238: 130 { 182 2 xyp  093 3 --p  239 5 x-p  3F";
+	std::string bad2   = "0238: 130 { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- } ";
+	std::string bad3   = "0238: 130  2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";
+	std::string bad4   = "023: 130 { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";
+	std::string bad5   = "0238: 130 { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- >";
+	std::string bad6   = "0238- 130 { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";
+	std::string bad7   = "0238: 130 < 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";
+	std::string bad8   = "0238: 130 { 182 2 xyp   093 3 --p  239 5 x-p  3FF 3 -y- }";
+	std::string bad9   = "0238: 130  { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";
+
+	TEST(verify_full(bad1, 1, "", 0x238););
+	TEST(verify_full(bad2, 1, "", 0x238););
+	TEST(verify_full(bad3, 1, "", 0x238););
+	TEST(verify_full(bad4, 1, "", 0x238););
+	TEST(verify_full(bad5, 1, "", 0x238););
+	TEST(verify_full(bad6, 1, "", 0x238););
+	TEST(verify_full(bad7, 1, "", 0x238););
+	TEST(verify_full(bad8, 1, "", 0x238););
+	TEST(verify_full(bad9, 1, "", 0x238););
+
+	std::string bad10  = "0238:  a  { 182 2 xyp  093 3 --p  239 5 x-p  3FF 3 -y- }";
+	std::string bad11 = "0238:     { 182 2 xyp  093 3 --p a239 5 x-p  3FF 3 -y- }";
+	std::string bad12 = "0238:     { 182 2 xyp  093 3 --p a239 5 x-p  3FF 3 -y- }";
+
+	TEST(verify_tiles_only(bad10, 1, "", 0x238););
+	TEST(verify_tiles_only(bad11, 1, "", 0x238););
+	TEST(verify_tiles_only(bad12, 1, "", 0x238););
+}
+*/

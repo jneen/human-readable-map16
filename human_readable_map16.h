@@ -12,6 +12,8 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
+#include "tile_format.h"
+
 namespace HumanReadableMap16 {
 	using Byte = unsigned char;
 	using _2Bytes = unsigned short int;
@@ -30,6 +32,7 @@ namespace HumanReadableMap16 {
 	constexpr const char* NO_ACTS_FORMAT =  "%04X:     { %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c }\n";
 	constexpr const char* NO_TILES_FORMAT = "%04X: %03X\n";
 
+	constexpr const char LM_EMPTY_TILE_SHORTHAND = '~';
 	constexpr const char* LM_EMPTY_TILE_FORMAT = "%04X: ~\n";
 	constexpr const char* LM_EMTPY_TILE_FORMAT_NO_NEWLINE = "%04X: ~";
 	constexpr _2Bytes LM_EMPTY_TILE_ACTS_LIKE = 0x130;
@@ -175,14 +178,26 @@ namespace HumanReadableMap16 {
 			static bool try_LM_empty_convert_full(std::vector<Byte>& tiles_vec, std::vector<Byte>& acts_like_vec, const std::string line, unsigned int expected_tile_number);
 			static bool try_LM_empty_convert_tiles_only(std::vector<Byte>& tiles_vec, const std::string line, unsigned int expected_tile_number);
 
-			static void convert_full(std::vector<Byte>& tiles_vec, std::vector<Byte>& acts_like_vec, const std::string line, unsigned int expected_tile_number);
-			static void verify_full(const std::string line, unsigned int expected_tile_number);
+			static void convert_full(std::vector<Byte>& tiles_vec, std::vector<Byte>& acts_like_vec, const std::string line, unsigned int expected_tile_number, unsigned int line_number, const fs::path file);
+			static void verify_full(const std::string line, unsigned int line_number, const fs::path file, unsigned int expected_tile_number);
 
-			static void convert_acts_like_only(std::vector<Byte>& acts_like_vec, const std::string line, unsigned int expected_tile_number);
-			static void verify_acts_like_only(const std::string line, unsigned int expected_tile_number);
+			static void convert_acts_like_only(std::vector<Byte>& acts_like_vec, const std::string line, unsigned int expected_tile_number, unsigned int line_number, const fs::path file);
+			static void verify_acts_like_only(const std::string line, unsigned int line_number, const fs::path file, unsigned int expected_tile_number);
 
-			static void convert_tiles_only(std::vector<Byte>& tiles_vec, const std::string line, unsigned int expected_tile_number);
-			static void verify_tiles_only(const std::string line, unsigned int expected_tile_number);
+			static void convert_tiles_only(std::vector<Byte>& tiles_vec, const std::string line, unsigned int expected_tile_number, unsigned int line_number, const fs::path file);
+			static void verify_tiles_only(const std::string line, unsigned int line_number, const fs::path file, unsigned int expected_tile_number);
+
+			static void verify_tile_number(const std::string line, unsigned int line_number, const fs::path file, unsigned int& curr_char_idx, 
+				TileFormat tile_format, unsigned int expected_tile_number);
+
+			static void verify_acts_like(const std::string line, unsigned int line_number, const fs::path file, unsigned int& curr_char_idx, TileFormat tile_format,
+				unsigned int expected_tile_number);
+
+			static void verify_8x8_tiles(const std::string line, unsigned int line_number, const fs::path file, unsigned int& curr_char_idx, TileFormat tile_format,
+				unsigned int expected_tile_number);
+
+			static void verify_8x8_tile(const std::string line, unsigned int line_number, const fs::path file, 
+				unsigned int expected_tile_number, unsigned int& curr_char_idx, TileFormat tile_format);
 
 			static unsigned int parse_BG_pages(std::vector<Byte>& bg_tiles_vec, unsigned int base_tile_number);
 			static unsigned int parse_FG_pages(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec, unsigned int base_tile_number);
@@ -209,6 +224,7 @@ namespace HumanReadableMap16 {
 				std::vector<Byte> tileset_group_specific_vec, std::vector<Byte> normal_pipe_tiles_vec, std::vector<Byte> diagonal_pipe_tiles_vec);
 
 		public: 
+			// static void tests();
 			static void convert(const fs::path input_path, const fs::path output_file);
 	};
 }
