@@ -377,6 +377,21 @@ void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs
 		throw FilesystemError("Input file either has no extension or an extension different from .map16, are you sure this is a map16 file?", input_file);
 	}
 
+	if (fs::exists(output_path) && fs::is_directory(output_path) && !fs::is_empty(output_path)) {
+		// output directory already exists, if it is not empty, we should check if there is a header file, if there is, it's probably 
+		// save to overwrite, otherwise the user probably specified this directory in error and we should raise an exception!
+		bool header_found = false;
+		for (const auto& entry : fs::directory_iterator(output_path)) {
+			if (entry.path().filename() == "header.txt") {
+				header_found = true;
+				break;
+			}
+		}
+		if (!header_found) {
+			throw FilesystemError("Pre-existing output directory is not empty and does not contain a header.txt file, are you sure this is the right directory to convert to?", output_path);
+		}
+	}
+
 	std::vector<Byte> bytes = read_binary_file(input_file);
 	auto header = get_header_from_map16_buffer(bytes);
 
