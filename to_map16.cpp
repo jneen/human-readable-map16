@@ -92,8 +92,6 @@ std::shared_ptr<HumanReadableMap16::Header> HumanReadableMap16::to_map16::parse_
 	header->various_flags_and_info = has_tileset_specific_page_2 | (is_full_game_export << 1);
 
 	fclose(fp);
-
-	/* does not work right now because ansi characters (like fusoya's copyright symbol...) are apparently invalid chars in strings
 	
 	std::fstream file;
 	file.open(header_path);
@@ -101,18 +99,16 @@ std::shared_ptr<HumanReadableMap16::Header> HumanReadableMap16::to_map16::parse_
 	std::string line;
 
 	while (std::getline(file, line)) {
-		size_t pos = line.find("comment_field: \"", 0);
+		std::string starting_string = "comment_field: \"";
+		size_t pos = line.find(starting_string, 0);
 		if (pos != std::string::npos) {
+			pos += +starting_string.size();
 			size_t end_pos = line.find("\"", pos);
-			header->comment = std::string(line.substr(pos, end_pos));
+			header->comment = std::string(line.substr(pos, end_pos - pos));
 		}
 	}
 
 	file.close();
-
-	*/
-
-	header->comment = "";
 
 	return header;
 }
@@ -968,7 +964,7 @@ std::vector<HumanReadableMap16::Byte> HumanReadableMap16::to_map16::get_header_v
 	split_and_insert_2(header->program_id, header_vec);
 	split_and_insert_4(header->extra_flags, header_vec);
 
-	split_and_insert_4(COMMENT_FIELD_OFFSET, header_vec);  // TODO change this once comments are transferred for real
+	split_and_insert_4(COMMENT_FIELD_OFFSET + header->comment.size(), header_vec);
 	split_and_insert_4(OFFSET_SIZE_TABLE_SIZE, header_vec);
 
 	split_and_insert_4(header->size_x, header_vec);
@@ -982,6 +978,10 @@ std::vector<HumanReadableMap16::Byte> HumanReadableMap16::to_map16::get_header_v
 	for (unsigned int i = 0; i != 0x14; i++) {
 		// insert unused bytes
 		header_vec.push_back(0x00);
+	}
+
+	for (const auto c : header->comment) {
+		header_vec.push_back(c);
 	}
 
 	return header_vec;
@@ -1018,8 +1018,6 @@ void HumanReadableMap16::to_map16::convert(const fs::path input_path, const fs::
 	}
 
 	_wchdir(input_path.c_str());
-
-	verify_header_file("header.txt");
 
 	auto header = parse_header_file("header.txt");
 
