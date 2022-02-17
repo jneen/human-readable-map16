@@ -94,7 +94,6 @@ tile & 0b1111111111, \
 (tile & 0b1000000000000000) ? HumanReadableMap16::Y_FLIP_ON : HumanReadableMap16::Y_FLIP_OFF, \
 (tile & 0b0010000000000000) ? HumanReadableMap16::PRIORITY_ON : HumanReadableMap16::PRIORITY_OFF
 
-// tiles: first byte -> yxpccctt, second byte -> tile number pls (need to switch bytes before calling)
 void HumanReadableMap16::from_map16::convert_to_file(FILE* fp, unsigned int tile_number, _2Bytes acts_like, _2Bytes tile1, _2Bytes tile2, _2Bytes tile3, _2Bytes tile4) {
 	if (try_LM_empty_convert(fp, tile_number, acts_like, tile1, tile2, tile3, tile4)) {
 		return;
@@ -442,23 +441,14 @@ void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs
 		first_truly_global_page = 2;
 	}
 
-#ifdef MULTICORE
-	#pragma omp parallel for
-#endif
 	for (unsigned int page_number = first_truly_global_page; page_number != 0x80; page_number++) {
 		convert_FG_page(bytes, page_number, full_map16_pair.first, full_acts_like_pair.first);
 	}
 
-#ifdef MULTICORE
-	#pragma omp parallel for
-#endif
 	for (unsigned int page_number = 0x80; page_number != 0x100; page_number++) {
 		convert_BG_page(bytes, page_number, full_map16_pair.first);
 	}
 
-#ifdef MULTICORE
-	#pragma omp parallel for
-#endif
 	for (unsigned int tileset_group = 0; tileset_group != 5; tileset_group++) {
 		convert_tileset_group_specific_pages(bytes, tileset_group, tileset_specific_first_two_pair.first, diagonal_grassland_pipes.first);
 	}
@@ -470,9 +460,6 @@ void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs
 		}
 	}
 
-#ifdef MULTICORE
-	#pragma omp parallel for
-#endif
 	for (unsigned int pipe = 0; pipe != 0x4; pipe++) {
 		convert_normal_pipe_tiles(bytes, pipe, normal_pipe_tiles.first);
 	}

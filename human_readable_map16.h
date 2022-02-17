@@ -1,9 +1,5 @@
 #pragma once
 
-#ifdef MULTICORE
-#include <omp.h>
-#endif
-
 #include <vector>
 #include <string>
 #include <fstream>
