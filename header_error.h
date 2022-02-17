@@ -19,4 +19,24 @@ class HeaderError : public DataError {
 		const std::string get_variable() {
 			return expected_variable;
 		}
+
+		std::string get_detailed_error_message() {
+			std::ostringstream s;
+			s << "Error in file \"" << get_file_path().string() << "\" on line " << get_line_number() << " at character " << get_char_index() << ":" << std::endl <<
+				"    \"" << get_line() << '\"' << std::endl;
+			for (int i = 0; i != get_char_index() + 4; i++) {
+				s << " ";
+			}
+			s << "^" << std::endl;
+			for (int i = 0; i != get_char_index() + 4; i++) {
+				s << " ";
+			}
+			s << "|" << std::endl;
+			for (int i = 0; i != get_char_index() + 4; i++) {
+				s << " ";
+			}
+			s << get_message() << std::endl;
+
+			return s.str();
+		}
 };

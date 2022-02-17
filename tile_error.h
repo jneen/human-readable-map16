@@ -30,7 +30,7 @@ class TileError : public DataError {
 			return expected_tile_number;
 		}
 
-		std::string get_detailed_error_string() {
+		std::string get_detailed_error_message() {
 			std::ostringstream s;
 			s << "Error in file \"" << get_file_path().string() << "\" on line " << get_line_number() << " at character " << get_char_index() << ":" << std::endl <<
 				"    \"" << get_line() << '\"' << std::endl;
