@@ -150,6 +150,10 @@ void HumanReadableMap16::to_map16::verify_header_file(const fs::path header_path
 				++curr_char;
 			}
 
+			if (seen_size == 0) {
+				throw HeaderError("Header value is not optional but was not given", "header.txt", i, line, curr_char, var_name);
+			}
+
 			if (var_name == "is_full_game_export" || var_name == "has_tileset_specific_page_2") {
 				if (var_value.at(0) != '1' && var_value.at(0) != '0') {
 					throw HeaderError("This header value may only be 1 (set to true) or 0 (set to false)", "header.txt", i, line, curr_char - 1, var_name);
