@@ -27,16 +27,10 @@
     <ClInclude Include="data_error.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="directory_not_found.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="file_not_found.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="header_error.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="path_not_found.h">
+    <ClInclude Include="filesystem_error.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="tile_error.h">

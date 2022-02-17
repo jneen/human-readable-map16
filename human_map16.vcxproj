@@ -157,12 +157,10 @@
     <ClInclude Include="arrays.h" />
     <ClInclude Include="human_map16_exception.h" />
     <ClInclude Include="data_error.h" />
-    <ClInclude Include="directory_not_found.h" />
-    <ClInclude Include="file_not_found.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="header_error.h" />
     <ClInclude Include="human_readable_map16.h" />
-    <ClInclude Include="path_not_found.h" />
+    <ClInclude Include="filesystem_error.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="tile_error.h" />
     <ClInclude Include="tile_format.h" />

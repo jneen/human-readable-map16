@@ -13,6 +13,7 @@
 namespace fs = std::filesystem;
 
 #include "tile_format.h"
+#include "filesystem_error.h"
 
 namespace HumanReadableMap16 {
 	using Byte = unsigned char;

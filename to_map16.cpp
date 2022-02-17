@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "human_readable_map16.h"
-#include "directory_not_found.h"
-#include "file_not_found.h"
+#include "filesystem_error.h"
 #include "tile_error.h"
 #include "header_error.h"
 #include "arrays.h"
@@ -580,6 +579,10 @@ std::vector<fs::path> HumanReadableMap16::to_map16::get_sorted_paths(const fs::p
 }
 
 unsigned int HumanReadableMap16::to_map16::parse_BG_pages(std::vector<Byte>& bg_tiles_vec, unsigned int base_tile_number) {
+	if (!fs::exists("global_pages\\BG_pages")) {
+		throw FilesystemError("Expected directory appears to be missing", fs::path("global_pages\\BG_pages"));
+	}
+
 	const auto sorted_paths = get_sorted_paths("global_pages\\BG_pages");
 
 	unsigned int curr_tile_number = base_tile_number;
@@ -601,6 +604,10 @@ unsigned int HumanReadableMap16::to_map16::parse_BG_pages(std::vector<Byte>& bg_
 }
 
 unsigned int HumanReadableMap16::to_map16::parse_FG_pages(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec, unsigned int base_tile_number) {
+	if (!fs::exists("global_pages\\FG_pages")) {
+		throw FilesystemError("Expected directory appears to be missing", fs::path("global_pages\\FG_pages"));
+	}
+
 	const auto sorted_paths = get_sorted_paths("global_pages\\FG_pages");
 
 	unsigned int curr_tile_number = base_tile_number;
@@ -631,6 +638,9 @@ unsigned int HumanReadableMap16::to_map16::parse_FG_pages(std::vector<Byte>& fg_
 
 unsigned int HumanReadableMap16::to_map16::parse_FG_pages_tileset_specific_page_2(std::vector<Byte>& fg_tiles_vec, std::vector<Byte>& acts_like_vec,
 	std::vector<Byte>& tileset_specific_tiles_vec, unsigned int base_tile_number) {
+	if (!fs::exists("global_pages\\FG_pages")) {
+		throw FilesystemError("Expected directory appears to be missing", fs::path("global_pages\\FG_pages"));
+	}
 
 	const auto sorted_paths = get_sorted_paths("global_pages\\FG_pages");
 
@@ -679,6 +689,10 @@ unsigned int HumanReadableMap16::to_map16::parse_FG_pages_tileset_specific_page_
 
 void HumanReadableMap16::to_map16::parse_tileset_group_specific_pages(std::vector<Byte>& tileset_group_specific_tiles_vec, 
 	std::vector<Byte>& diagonal_pipe_tiles_vec, const std::vector<Byte>& fg_tiles_vec) {
+	if (!fs::exists("tileset_group_specific_tiles")) {
+		throw FilesystemError("Expected directory appears to be missing", fs::path("tileset_group_specific_tiles"));
+	}
+
 	const auto sorted_paths = get_sorted_paths("tileset_group_specific_tiles");
 
 	std::unordered_set<_2Bytes> tileset_group_specific = std::unordered_set<_2Bytes>(TILESET_GROUP_SPECIFIC_TILES.begin(), TILESET_GROUP_SPECIFIC_TILES.end());
@@ -737,6 +751,10 @@ void HumanReadableMap16::to_map16::duplicate_tileset_group_specific_pages(std::v
 }
 
 void HumanReadableMap16::to_map16::parse_tileset_specific_pages(std::vector<Byte>& tileset_specific_tiles_vec) {
+	if (!fs::exists("tileset_specific_tiles")) {
+		throw FilesystemError("Expected directory appears to be missing", fs::path("tileset_specific_tiles"));
+	}
+
 	const auto sorted_paths = get_sorted_paths("tileset_specific_tiles");
 
 	for (const auto& entry : sorted_paths) {
@@ -756,6 +774,10 @@ void HumanReadableMap16::to_map16::parse_tileset_specific_pages(std::vector<Byte
 }
 
 void HumanReadableMap16::to_map16::parse_normal_pipe_tiles(std::vector<Byte>& pipe_tiles_vec) {
+	if (!fs::exists("pipe_tiles")) {
+		throw FilesystemError("Expected directory appears to be missing", fs::path("pipe_tiles"));
+	}
+
 	const auto sorted_paths = get_sorted_paths("pipe_tiles");
 
 	for (const auto& entry : sorted_paths) {
@@ -879,6 +901,10 @@ void HumanReadableMap16::to_map16::convert(const fs::path input_path, const fs::
 	fs::path original_working_dir = fs::current_path();
 
 	_wchdir(input_path.c_str());
+
+	if (!fs::exists("header.txt")) {
+		throw FilesystemError("Expected file appears to be missing", fs::path("header.txt"));
+	}
 
 	auto header = parse_header_file("header.txt");
 

@@ -369,24 +369,37 @@ void HumanReadableMap16::from_map16::write_header_file(std::shared_ptr<Header> h
 }
 
 void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs::path output_path) {
+	if (!fs::exists(input_file)) {
+		throw FilesystemError("Input map16 file does not exist", input_file);
+	}
+
+	if (!input_file.has_extension() || input_file.extension() != ".map16") {
+		throw FilesystemError("Input file either has no extension or an extension different from .map16, are you sure this is a map16 file?", input_file);
+	}
+
 	std::vector<Byte> bytes = read_binary_file(input_file);
 	auto header = get_header_from_map16_buffer(bytes);
 
-	fs::remove_all(output_path);
-	fs::create_directory(output_path);
-	_wchdir(output_path.c_str());
+	try {
+		fs::remove_all(output_path);
+		fs::create_directory(output_path);
+		_wchdir(output_path.c_str());
 
-	write_header_file(header, "header.txt");
+		write_header_file(header, "header.txt");
 
-	fs::create_directory("global_pages");
-	fs::create_directory("global_pages\\FG_pages");
-	fs::create_directory("global_pages\\BG_pages");
-	fs::create_directory("tileset_group_specific_tiles");
+		fs::create_directory("global_pages");
+		fs::create_directory("global_pages\\FG_pages");
+		fs::create_directory("global_pages\\BG_pages");
+		fs::create_directory("tileset_group_specific_tiles");
 
-	if (has_tileset_specific_page_2s(header)) {
-		fs::create_directory("tileset_specific_tiles");
+		if (has_tileset_specific_page_2s(header)) {
+			fs::create_directory("tileset_specific_tiles");
+		}
+		fs::create_directory("pipe_tiles");
+
+	} catch (const fs::filesystem_error e) {
+		throw FilesystemError("Encountered underlying file system error: " + std::string(e.what()), output_path);
 	}
-	fs::create_directory("pipe_tiles");
 
 	const auto offset_size_table = get_offset_size_table(bytes, header);
 
