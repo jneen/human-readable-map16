@@ -395,6 +395,10 @@ void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs
 	std::vector<Byte> bytes = read_binary_file(input_file);
 	auto header = get_header_from_map16_buffer(bytes);
 
+	if (!is_full_game_export(header)) {
+		throw HumanMap16Exception("Conversion to non-full-game-export map16 is not (yet?) supported");
+	}
+
 	try {
 		fs::remove_all(output_path);
 		fs::create_directory(output_path);

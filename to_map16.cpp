@@ -118,7 +118,116 @@ std::shared_ptr<HumanReadableMap16::Header> HumanReadableMap16::to_map16::parse_
 }
 
 void HumanReadableMap16::to_map16::verify_header_file(const fs::path header_path) {
-	// TODO
+	if (!fs::exists("header.txt")) {
+		throw FilesystemError("Expected file appears to be missing", fs::path("header.txt"));
+	}
+
+	std::array HEADER_VARS{
+		"file_format_version_number",
+		"game_id",
+		"program_version",
+		"program_id",
+		"size_x",
+		"size_y",
+		"base_x",
+		"base_y",
+		"is_full_game_export",
+		"has_tileset_specific_page_2",
+		"comment_field"
+	};
+
+	std::array HEADER_VAR_MAX_DIGITS{
+		4,
+		4,
+		4,
+		4,
+		8,
+		8,
+		8,
+		8,
+		1,
+		1
+	};
+
+	std::unordered_set<char> hex_digits{
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+	};
+
+	std::fstream header_file;
+	header_file.open(header_path);
+
+	std::vector<std::string> lines;
+	std::string curr_line;
+	while (std::getline(header_file, curr_line)) {
+		lines.push_back(curr_line);
+	}
+	// std::string message, fs::path file, unsigned int line_number, std::string line, unsigned int char_index, std::string variable
+	if (lines.size() != HEADER_VARS.size()) {
+		throw HeaderError("Header file contains more lines than expected", "header.txt", 0, lines.at(0), 0, "");
+	}
+
+	unsigned int i = 0;
+	for (const auto& line : lines) {
+		std::string var_name = HEADER_VARS.at(i);
+		size_t curr_char = 0;
+
+		std::string found_var_name;
+		try {
+			found_var_name = line.substr(0, var_name.size() + 2);
+		} catch (const std::out_of_range&) {
+			throw HeaderError("Unexpected end of header variable name", "header.txt", i, line, curr_char, var_name);
+		}
+
+		if (found_var_name != var_name + ": ") {
+			throw HeaderError("Unexpected header variable/separator encountered for this line", "header.txt", i, line, curr_char, var_name);
+		}
+
+		curr_char += var_name.size() + 2;
+
+		if (var_name != "comment_field") {
+			size_t var_size = HEADER_VAR_MAX_DIGITS.at(i);
+
+			std::string var_value;
+			try {
+				var_value = line.substr(var_name.size() + 2, line.size() - (var_name.size() + 2));
+			} catch (const std::out_of_range&) {
+				throw HeaderError("Unexpected end of header value specification", "header.txt", i, line, curr_char, var_name);
+			}
+
+			size_t seen_size = 0;
+			for (const auto c : var_value) {
+				if (hex_digits.count(c) == 0) {
+					throw HeaderError("Non-hexadecimal character encountered in header variable value", "header.txt", i, line, curr_char, var_name);
+				}
+				if (++seen_size > var_size) {
+					throw HeaderError("Header value longer than expected and/or unexpected trailing whitespace", "header.txt", i, line, curr_char, var_name);
+				}
+				++curr_char;
+			}
+
+			if (var_name == "is_full_game_export" || var_name == "has_tileset_specific_page_2") {
+				if (var_value.at(0) != '1' && var_value.at(0) != '0') {
+					throw HeaderError("This header value may only be 1 (set to true) or 0 (set to false)", "header.txt", i, line, curr_char - 1, var_name);
+				}
+			}
+		}
+		else {
+			std::string comment_including_apostrophes;
+			try {
+				comment_including_apostrophes = line.substr(var_name.size() + 2, line.size() - (var_name.size() + 2));
+			} catch (const std::out_of_range&) {
+				throw HeaderError("Unexpected end of value while verifying comment field", "header.txt", i, line, curr_char, var_name);
+			}
+			if (comment_including_apostrophes.at(0) != '"') {
+				throw HeaderError("Comment field missing opening \" character", "header.txt", i, line, curr_char, var_name);
+			}
+			curr_char += comment_including_apostrophes.size();
+			if (comment_including_apostrophes.at(comment_including_apostrophes.size() - 1) != '"') {
+				throw HeaderError("Comment field missing closing \" character", "header.txt", i, line, curr_char, var_name);
+			}
+		}
+		++i;
+	}
 }
 
 void HumanReadableMap16::to_map16::split_and_insert_2(_2Bytes bytes, std::vector<Byte>& byte_vec) {
@@ -280,7 +389,7 @@ void HumanReadableMap16::to_map16::verify_8x8_tiles(const std::string line, unsi
 			throw TileError("Unexpected end of 16x16 tile while verifying 8x8 tiles", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 
-		if (whitespace != std::string("  ")) {
+		if (whitespace != "  ") {
 			throw TileError("Incorrect whitespace in 8x8 tiles specification", file, line_number, line, curr_char_idx, tile_format, expected_tile_number);
 		}
 		curr_char_idx += 2;
@@ -552,7 +661,7 @@ void HumanReadableMap16::to_map16::verify_tiles_only(const std::string line, uns
 		throw  TileError("Unexpected end of tile line while skipping over acts like field", file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
 	}
 
-	if (supposed_to_be_whitespace != std::string("   ")) {
+	if (supposed_to_be_whitespace != "   ") {
 		throw  TileError("Unexpected characters in acts like field that should be empty",
 			file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
 	}
@@ -910,11 +1019,17 @@ void HumanReadableMap16::to_map16::convert(const fs::path input_path, const fs::
 
 	_wchdir(input_path.c_str());
 
-	if (!fs::exists("header.txt")) {
-		throw FilesystemError("Expected file appears to be missing", fs::path("header.txt"));
-	}
+	verify_header_file("header.txt");
 
 	auto header = parse_header_file("header.txt");
+
+	if (!is_full_game_export(header)) {
+		throw HumanMap16Exception("Conversion to non-full-game-export map16 is not (yet?) supported");
+	} else {
+		if (header->base_x != 0 || header->base_y != 0) {
+			throw HumanMap16Exception("Base X and base Y values must be 0 for full game exports");
+		}
+	}
 
 	std::vector<Byte> fg_tiles_vec{}, bg_tiles_vec{}, acts_like_vec{}, tileset_specific_vec{},
 		tileset_group_specific_vec{}, diagonal_pipe_tiles_vec{}, pipe_tiles_vec{};

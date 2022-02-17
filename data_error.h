@@ -8,23 +8,17 @@ namespace fs = std::filesystem;
 
 class DataError : public HumanMap16Exception {
 private:
-	std::string _message;
 	fs::path in_file;
 	unsigned int _line_number;
 	std::string incorrect_line;
 	unsigned int _char_index;
 
 public:
-	DataError(std::string message, fs::path file, unsigned int line_number, std::string line, unsigned int char_index) {
-		_message = message;
+	DataError(std::string message, fs::path file, unsigned int line_number, std::string line, unsigned int char_index) : HumanMap16Exception(message) {
 		in_file = file;
 		_line_number = line_number;
 		incorrect_line = line;
 		_char_index = char_index + 1;
-	}
-
-	const std::string get_message() {
-		return _message;
 	}
 
 	const fs::path get_file_path() {

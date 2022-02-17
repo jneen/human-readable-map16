@@ -10,19 +10,13 @@ namespace fs = std::filesystem;
 class FilesystemError : public HumanMap16Exception {
 	private:
 		fs::path missing_path;
-		std::string _message;
 	
 	public:
-		FilesystemError(std::string message, fs::path path) {
-			_message = message;
+		FilesystemError(std::string message, fs::path path) : HumanMap16Exception(message) {
 			missing_path = path;
 		}
 
 		const fs::path get_path() {
 			return missing_path;
-		}
-
-		const std::string get_message() {
-			return _message;
 		}
 };
