@@ -900,6 +900,14 @@ std::vector<HumanReadableMap16::Byte> HumanReadableMap16::to_map16::combine(std:
 void HumanReadableMap16::to_map16::convert(const fs::path input_path, const fs::path output_file) {
 	fs::path original_working_dir = fs::current_path();
 
+	if (!fs::exists(input_path)) {
+		throw FilesystemError("Input path does not appear to exist", input_path);
+	}
+
+	if (!fs::is_directory(input_path)) {
+		throw FilesystemError("Input path does not appear to be a directory", input_path);
+	}
+
 	_wchdir(input_path.c_str());
 
 	if (!fs::exists("header.txt")) {
