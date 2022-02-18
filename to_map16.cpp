@@ -390,7 +390,7 @@ void HumanReadableMap16::to_map16::verify_acts_like(const std::string line, unsi
 
 	std::string acts_like;
 	try {
-		acts_like = line.substr(6, 3);
+		acts_like = line.substr(6, 4);
 	}
 	catch (const std::out_of_range&) {
 		curr_char_idx = line.size();
@@ -398,7 +398,7 @@ void HumanReadableMap16::to_map16::verify_acts_like(const std::string line, unsi
 			curr_char_idx, tile_format, expected_tile_number);
 	}
 
-	if (acts_like.size() != 3) {
+	if (acts_like.size() != 4) {
 		curr_char_idx = line.size();
 		throw  TileError("Unexpected end of 16x16 tile specification while verifying acts like settings",
 			file, line_number, line, curr_char_idx, tile_format, expected_tile_number
@@ -417,12 +417,12 @@ void HumanReadableMap16::to_map16::verify_acts_like(const std::string line, unsi
 
 	unsigned int acts = (acts_digit_1 << 8) | (acts_digit_2 << 4) | acts_digit_3;
 
-	if (acts >= 0x200) {
-		throw  TileError("Unexpected acts like setting >= 0x200", file, line_number, line, 
+	if (acts > 0x7FFF) {
+		throw  TileError("Unexpected acts like setting > 0x7FFF", file, line_number, line, 
 			curr_char_idx, tile_format, expected_tile_number);
 	}
 
-	curr_char_idx += 3;
+	curr_char_idx += 4;
 }
 
 void HumanReadableMap16::to_map16::verify_8x8_tile(const std::string line, unsigned int line_number, const fs::path file,
@@ -598,23 +598,23 @@ void HumanReadableMap16::to_map16::verify_tiles_only(const std::string line, uns
 
 	std::string supposed_to_be_whitespace;
 	try {
-		supposed_to_be_whitespace = line.substr(6, 3);
+		supposed_to_be_whitespace = line.substr(6, 4);
 	}
 	catch (const std::out_of_range&) {
 		curr_char_idx = line.size();
 		throw  TileError("Unexpected end of tile line while skipping over acts like field", file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
 	}
 
-	if (supposed_to_be_whitespace.size() != 3) {
+	if (supposed_to_be_whitespace.size() != 4) {
 		curr_char_idx = line.size();
 		throw  TileError("Unexpected end of tile line while skipping over acts like field", file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
 	}
 
-	if (supposed_to_be_whitespace != "   ") {
+	if (supposed_to_be_whitespace != "    ") {
 		throw  TileError("Unexpected characters in acts like field that should be empty",
 			file, line_number, line, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
 	}
-	curr_char_idx += 3;
+	curr_char_idx += 4;
 
 	verify_8x8_tiles(line, line_number, file, curr_char_idx, TileFormat::TILES_ONLY, expected_tile_number);
 

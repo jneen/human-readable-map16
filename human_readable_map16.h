@@ -25,14 +25,14 @@ namespace HumanReadableMap16 {
 	constexpr const char PRIORITY_ON = 'p';
 	constexpr const char PRIORITY_OFF = '-';
 
-	constexpr const char* STANDARD_FORMAT = "%04X: %03X { %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c }\n";
-	constexpr const char* STANDARD_FORMAT_EXAMPLE = "003C: 130 { 0A0 7 x-p  2A2 3 xyp  3A1 5 -yp  1A3 0 --p }";
+	constexpr const char* STANDARD_FORMAT = "%04X: %04X { %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c }\n";
+	constexpr const char* STANDARD_FORMAT_EXAMPLE = "003C: 0130 { 0A0 7 x-p  2A2 3 xyp  3A1 5 -yp  1A3 0 --p }";
 
-	constexpr const char* NO_ACTS_FORMAT =  "%04X:     { %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c }\n";
-	constexpr const char* NO_ACTS_FORMAT_EXAMPLE = "003C:     { 0A0 7 x-p  2A2 3 xyp  3A1 5 -yp  1A3 0 --p }";
+	constexpr const char* NO_ACTS_FORMAT =  "%04X:      { %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c  %03X %d %c%c%c }\n";
+	constexpr const char* NO_ACTS_FORMAT_EXAMPLE = "003C:      { 0A0 7 x-p  2A2 3 xyp  3A1 5 -yp  1A3 0 --p }";
 
-	constexpr const char* NO_TILES_FORMAT = "%04X: %03X\n";
-	constexpr const char* NO_TILES_EXAMPLE = "003C: 130";
+	constexpr const char* NO_TILES_FORMAT = "%04X: %04X\n";
+	constexpr const char* NO_TILES_EXAMPLE = "003C: 0130";
 
 	constexpr const char LM_EMPTY_TILE_SHORTHAND = '~';
 	constexpr const char* LM_EMPTY_TILE_FORMAT = "%04X: ~\n";
