@@ -652,6 +652,10 @@ unsigned int HumanReadableMap16::to_map16::parse_BG_pages(std::vector<Byte>& bg_
 		std::string line;
 		size_t line_no = 1;
 		while (std::getline(page_file, line)) {
+			if (line == "") {
+				++line_no;
+				continue;
+			}
 			convert_tiles_only(bg_tiles_vec, line, curr_tile_number++, line_no++, entry);
 		}
 
@@ -679,6 +683,10 @@ unsigned int HumanReadableMap16::to_map16::parse_FG_pages(std::vector<Byte>& fg_
 		std::string line;
 		size_t line_no = 1;
 		while (std::getline(page_file, line)) {
+			if (line == "") {
+				++line_no;
+				continue;
+			}
 			if (tileset_group_specific.count(curr_tile_number) == 0) {
 				convert_full(fg_tiles_vec, acts_like_vec, line, curr_tile_number++, line_no++, entry);
 			}
@@ -713,6 +721,10 @@ unsigned int HumanReadableMap16::to_map16::parse_FG_pages_tileset_specific_page_
 		std::string line;
 		size_t line_no = 1;
 		while (std::getline(page_file, line)) {
+			if (line == "") {
+				++line_no;
+				continue;
+			}
 			bool not_on_page_2 = curr_tile_number < 0x200 || curr_tile_number >= 0x300;
 
 			if (tileset_group_specific.count(curr_tile_number) == 0 && not_on_page_2) {
@@ -763,11 +775,13 @@ void HumanReadableMap16::to_map16::parse_tileset_group_specific_pages(std::vecto
 
 		std::string line;
 		size_t line_no = 1;
-		for (unsigned int tile_number = 0; tile_number != PAGE_SIZE * 2; tile_number++) {
+		for (unsigned int tile_number = 0; tile_number != PAGE_SIZE * 2; ++tile_number) {
 			if (tileset_group_specific.count(tile_number) != 0) {
 				// if tile is tileset-group-specific, just take the tile spec from the file
 
-				std::getline(page_file, line);
+				do {
+					std::getline(page_file, line);
+				} while (line == "");
 				convert_tiles_only(tileset_group_specific_tiles_vec, line, tile_number, line_no++, entry);
 			}
 			else {
@@ -785,7 +799,9 @@ void HumanReadableMap16::to_map16::parse_tileset_group_specific_pages(std::vecto
 			// if this is tileset group 0, handle the diagonal pipe tiles
 
 			for (const auto diagonal_pipe_tile_number : DIAGONAL_PIPE_TILES) {
-				std::getline(page_file, line);
+				do {
+					std::getline(page_file, line);
+				} while (line == "");
 				convert_tiles_only(diagonal_pipe_tiles_vec, line, diagonal_pipe_tile_number, line_no++, entry);
 			}
 
@@ -824,6 +840,10 @@ void HumanReadableMap16::to_map16::parse_tileset_specific_pages(std::vector<Byte
 		std::string line;
 		size_t line_no = 1;
 		while (std::getline(page_file, line)) {
+			if (line == "") {
+				++line_no;
+				continue;
+			}
 			convert_tiles_only(tileset_specific_tiles_vec, line, curr_tile_number++, line_no++, entry);
 		}
 
@@ -845,7 +865,9 @@ void HumanReadableMap16::to_map16::parse_normal_pipe_tiles(std::vector<Byte>& pi
 		std::string line;
 		size_t line_no = 1;
 		for (const auto tile_number : NORMAL_PIPE_TILES) {
-			std::getline(page_file, line);
+			do {
+				std::getline(page_file, line);
+			} while (line == "");
 			convert_tiles_only(pipe_tiles_vec, line, tile_number, line_no++, entry);
 		}
 

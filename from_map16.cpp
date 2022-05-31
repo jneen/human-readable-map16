@@ -147,6 +147,10 @@ void HumanReadableMap16::from_map16::convert_FG_page(std::vector<Byte> map16_buf
 
 		convert_to_file(fp, curr_tile_number, acts_like, tile1, tile2, tile3, tile4);
 
+		if (i != PAGE_SIZE - 1) {
+			fprintf_s(fp, "\n");
+		}
+
 		++curr_tile_number;
 		curr_tile_it += _16x16_BYTE_SIZE;
 		curr_acts_like_it += ACTS_LIKE_SIZE;
@@ -167,6 +171,10 @@ void HumanReadableMap16::from_map16::convert_global_page_2_for_tileset_specific_
 		_2Bytes acts_like = join_bytes(curr_acts_like_it, curr_acts_like_it + ACTS_LIKE_SIZE);
 
 		convert_to_file(fp, curr_tile_number, acts_like);
+
+		if (i != PAGE_SIZE - 1) {
+			fprintf_s(fp, "\n");
+		}
 
 		++curr_tile_number;
 		curr_acts_like_it += ACTS_LIKE_SIZE;
@@ -193,6 +201,10 @@ void HumanReadableMap16::from_map16::convert_BG_page(std::vector<Byte> map16_buf
 
 		++curr_tile_number;
 		curr_tile_it += _16x16_BYTE_SIZE;
+
+		if (i != PAGE_SIZE - 1) {
+			fprintf_s(fp, "\n");
+		}
 	}
 
 	fclose(fp);
@@ -217,6 +229,10 @@ void HumanReadableMap16::from_map16::convert_tileset_group_specific_pages(std::v
 
 		convert_to_file(fp, tile_number, tile1, tile2, tile3, tile4);
 
+		if (i != TILESET_GROUP_SPECIFIC_TILES.size() - 1) {
+			fprintf_s(fp, "\n");
+		}
+
 		try {
 			curr_tile_it += _16x16_BYTE_SIZE * (TILESET_GROUP_SPECIFIC_TILES.at(i + 1) - TILESET_GROUP_SPECIFIC_TILES.at(i));
 		}
@@ -235,6 +251,10 @@ void HumanReadableMap16::from_map16::convert_tileset_group_specific_pages(std::v
 			_2Bytes tile4 = join_bytes(diag_pipe_it + 6, diag_pipe_it + 8);
 
 			convert_to_file(fp, tile_number, tile1, tile2, tile3, tile4);
+
+			if (tile_number != DIAGONAL_PIPE_TILES.back()) {
+				fprintf_s(fp, "\n");
+			}
 
 			diag_pipe_it += _16x16_BYTE_SIZE;
 		}
@@ -263,6 +283,10 @@ void HumanReadableMap16::from_map16::convert_tileset_specific_page_2(std::vector
 
 		convert_to_file(fp, tile_number, tile1, tile2, tile3, tile4);
 
+		if (i != PAGE_SIZE - 1) {
+			fprintf_s(fp, "\n");
+		}
+
 		curr_tile_it += _16x16_BYTE_SIZE;
 	}
 
@@ -284,6 +308,10 @@ void HumanReadableMap16::from_map16::convert_normal_pipe_tiles(std::vector<Byte>
 		_2Bytes tile4 = join_bytes(curr_tile_it + 6, curr_tile_it + 8);
 
 		convert_to_file(fp, tile_number, tile1, tile2, tile3, tile4);
+
+		if (tile_number != NORMAL_PIPE_TILES.back()) {
+			fprintf_s(fp, "\n");
+		}
 
 		curr_tile_it += _16x16_BYTE_SIZE;
 	}
@@ -324,6 +352,10 @@ void HumanReadableMap16::from_map16::convert_first_two_non_tileset_specific(std:
 		}
 		else {
 			convert_to_file(fp, tile_number, acts_like);
+		}
+
+		if (i != (PAGE_SIZE * 2) - 1) {
+			fprintf_s(fp, "\n");
 		}
 
 		curr_tile_it += _16x16_BYTE_SIZE;
@@ -454,7 +486,6 @@ void HumanReadableMap16::from_map16::convert(const fs::path input_file, const fs
 	}
 
 	if (has_tileset_specific_page_2s(header)) {
-		#pragma omp parallel for
 		for (unsigned int tileset = 0; tileset != 0xF; tileset++) {
 			convert_tileset_specific_page_2(bytes, tileset, tileset_specific_page_2s_pair.first);
 		}
