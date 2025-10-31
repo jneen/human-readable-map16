@@ -12,10 +12,8 @@ ifeq ($(PLATFORM),)
     UNAME = $(shell uname -s)
     ifeq ($(UNAME),Darwin)
       PLATFORM = macos
-      LIBEXT = dylib
     else ifeq ($(UNAME),Linux)
       PLATFORM = linux
-      LIBEXT = so
     else
       PLATFORM = unknown
     endif
@@ -28,6 +26,18 @@ ifeq ($(PLATFORM),unknown)
   $(error unknown platform, please specify PLATFORM= windows, macos, or linux)
 else
   $(info ==========  building for $(PLATFORM)-$(ARCH) ============)
+endif
+
+ifeq ($(PLATFORM),windows)
+  LIBEXT = dll
+endif
+
+ifeq ($(PLATFORM),macos)
+  LIBEXT = dylib
+endif
+
+ifeq ($(PLATFORM),linux)
+  LIBEXT = so
 endif
 
 LIB = human_readable_map16.$(LIBEXT)
