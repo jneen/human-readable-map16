@@ -49,7 +49,7 @@ FLAGS += $(CPPFLAGS)
 FLAGS += -Wall
 FLAGS += --std=c++17
 
-$(LIB):
+$(LIB): $(SOURCES)
 	$(CXX) -dynamiclib $(FLAGS) $(SOURCES) -o $@
 
 .PHONY: clean
